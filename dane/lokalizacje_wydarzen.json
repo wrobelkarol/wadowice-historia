@@ -1,0 +1,18 @@
+{
+  "_opis": "Ręczne wskazanie obszaru, gdy nie wynika wprost z pól rekordu. id → miejscowości (nazwy z OSM), notatka widoczna na podstronie, przyblizony: oznaczenie „obszar przybliżony”. Bez wpisu i bez miejscowości rekord zostaje tylko na liście.",
+  "1648-1772-A-008": {
+    "miejscowosci": ["Lanckorona", "Barwałd Dolny", "Barwałd Średni", "Barwałd Górny", "Klecza Dolna", "Klecza Górna", "Kęty"],
+    "notatka": "Notatka proboszcza wymienia Kraków, Kęty, Kleczę, Barwałd i Lanckoronę. Barwałd i Klecza to dziś po kilka wsi, źródło ich nie rozróżnia, więc zaznaczono wszystkie. Kraków leży poza zasięgiem mapy.",
+    "przyblizony": true
+  },
+  "1648-1772-A-012": {
+    "miejscowosci": ["Wadowice"],
+    "notatka": "Źródło mówi o bydle „okolicznym” i nie podaje zasięgu. Zaznaczono tylko Wadowice, których dotyczą zarządzenia.",
+    "przyblizony": true
+  },
+  "1648-1772-B-013": {
+    "miejscowosci": ["Kęty"],
+    "notatka": "Źródło mówi o Kętach i okolicy, zasięgu „okolicy” nie określa. Zaznaczono tylko Kęty.",
+    "przyblizony": true
+  }
+}

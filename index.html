@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wydarzenia w powiecie wadowickim, 0–1945</title>
+<meta name="description" content="Mapa udokumentowanych wydarzeń historycznych na terenie dzisiejszego powiatu wadowickiego: bitwy, najazdy, przemarsze wojsk, pożary, epidemie.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="strona-mapy">
+
+<header class="naglowek">
+  <h1>Wydarzenia w powiecie wadowickim <span class="lata-tytul">0–1945</span></h1>
+  <nav aria-label="Główne">
+    <a href="wydarzenia/">Wszystkie wydarzenia</a>
+    <a href="o-projekcie/">O projekcie</a>
+  </nav>
+</header>
+
+<main id="mapa" tabindex="0" role="group" aria-label="Mapa powiatu wadowickiego. Strzałki przesuwają, plus i minus przybliżają, klawisz Tab przechodzi między wydarzeniami.">
+  <svg id="plotno" xmlns="http://www.w3.org/2000/svg">
+    <defs><clipPath id="przyciecie" clipPathUnits="userSpaceOnUse"><path id="przyciecie-sciezka"></path></clipPath>
+      <pattern id="kreski-epizootia" class="kreski" width="9" height="9" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="9" stroke="#e8791e" stroke-width="3.2"/></pattern>
+      <pattern id="kreski-glod" class="kreski" width="9" height="9" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="9" stroke="#8a5a2b" stroke-width="3.2"/></pattern>
+    </defs>
+    <g id="swiat">
+      <g id="w-obszary"></g>
+      <g id="w-drogi" clip-path="url(#przyciecie)"></g>
+      <g id="w-gminy"></g>
+      <path id="w-powiat"></path>
+    </g>
+    <g id="e-miejsca"></g>
+    <g id="e-linie"></g>
+    <g id="e-etykiety"></g>
+    <g id="e-kropki"></g>
+  </svg>
+  <p id="pusto" hidden></p>
+</main>
+
+<div class="zoom" role="group" aria-label="Przybliżenie mapy">
+  <button type="button" id="zoom-plus" aria-label="Przybliż">+</button>
+  <button type="button" id="zoom-minus" aria-label="Oddal">−</button>
+</div>
+
+<aside class="legenda" id="legenda" aria-label="Legenda i ustawienia">
+  <button type="button" class="legenda-przelacz" id="legenda-przelacz" aria-expanded="false" aria-controls="legenda-tresc">Legenda</button>
+  <div id="legenda-tresc" class="legenda-tresc">
+    <ul class="klucz">
+      <li><svg width="22" height="14" aria-hidden="true"><circle cx="11" cy="7" r="4.5" class="kr kr-pelna"/></svg>wydarzenie, pewność A lub B</li>
+      <li id="klucz-c"><svg width="22" height="14" aria-hidden="true"><circle cx="11" cy="7" r="4.5" class="kr kr-obrys"/></svg>pewność C (sam obrys)</li>
+      <li id="klucz-d" hidden><svg width="22" height="14" aria-hidden="true"><circle cx="11" cy="7" r="4.5" class="kr kr-legenda"/></svg>legenda, pewność D</li>
+      <li><svg width="22" height="14" aria-hidden="true"><circle cx="11" cy="7" r="4.5" class="kr kr-szara"/></svg>poza powiatem</li>
+      <li><svg width="22" height="14" aria-hidden="true"><rect x="2" y="2" width="18" height="10" class="ob ob-epidemia"/></svg>epidemia</li>
+      <li><svg width="22" height="14" aria-hidden="true"><rect x="2" y="2" width="18" height="10" class="ob ob-epizootia"/></svg>zaraza bydła (epizootia)</li>
+      <li><svg width="22" height="14" aria-hidden="true"><rect x="2" y="2" width="18" height="10" class="ob ob-glod"/></svg>głód</li>
+      <li><svg width="22" height="14" aria-hidden="true"><line x1="1" y1="7" x2="21" y2="7" class="li-powiat"/></svg>granica powiatu</li>
+      <li><svg width="22" height="14" aria-hidden="true"><line x1="1" y1="7" x2="21" y2="7" class="li-gmina"/></svg>gminy przyległe</li>
+    </ul>
+    <label class="przelacznik"><input type="checkbox" id="pokaz-c"><span>pokaż także słabiej udokumentowane (pewność C)</span></label>
+    <label class="przelacznik" id="etykieta-d" hidden><input type="checkbox" id="pokaz-d"><span>pokaż także legendy (pewność D)</span></label>
+    <p class="poza-mapa"><a id="link-poza-mapa" href="wydarzenia/#poza-mapa"></a></p>
+  </div>
+</aside>
+
+<section class="suwak-panel" aria-label="Zakres lat">
+  <div class="suwak-gora">
+    <output id="lata-odczyt" aria-live="polite"></output>
+    <span class="suwak-klucz"><i class="seg-gotowa"></i>opracowane <i class="seg-wkrotce"></i>w przygotowaniu</span>
+  </div>
+  <div id="suwak" class="suwak">
+    <div id="suwak-epoki"></div>
+    <div id="suwak-zakres" class="suwak-zakres"></div>
+    <div id="suwak-znaczniki" aria-hidden="true"></div>
+    <div id="uchwyt-od" class="uchwyt" role="slider" tabindex="0" aria-label="Rok początkowy"></div>
+    <div id="uchwyt-do" class="uchwyt" role="slider" tabindex="0" aria-label="Rok końcowy"></div>
+  </div>
+  <div id="suwak-lata" class="suwak-lata" aria-hidden="true"></div>
+  <p class="atrybucja">© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> (ODbL) · <span id="wygenerowano"></span></p>
+</section>
+
+<div id="dymek" class="dymek" role="tooltip" hidden></div>
+<div id="lista-grupy" class="lista-grupy" role="dialog" aria-modal="false" aria-labelledby="lista-grupy-tytul" hidden></div>
+
+<noscript><p class="bez-js">Mapa wymaga JavaScriptu. Wszystkie wydarzenia są też dostępne jako <a href="wydarzenia/">lista</a>.</p></noscript>
+
+<script src="assets/vendor/d3-7.9.0.min.js"></script>
+<script src="assets/konfiguracja.js"></script>
+<script src="assets/mapa.js"></script>
+</body>
+</html>
