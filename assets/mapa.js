@@ -433,8 +433,11 @@
     document.getElementById('lata-odczyt').textContent = 'Lata ' + o + ': ' + odmiana(evs.length) + ' na mapie';
     var pusto = document.getElementById('pusto');
     if (!evs.length) {
-      var pokrywa = D.epoki.filter(function (e) { return e.gotowa && e.od <= stan.do && e.do >= stan.od; }).length;
-      pusto.textContent = pokrywa ? 'W tym zakresie lat nie ma wydarzeń przy obecnych ustawieniach.' : 'Epoki z tego zakresu są w przygotowaniu.';
+      var pokrywa = D.epoki.filter(function (e) { return e.gotowa && e.od < stan.do && e.do > stan.od; });
+      var bezWydarzen = pokrywa.filter(function (e) { return !e.ile; });
+      if (!pokrywa.length) pusto.textContent = 'Epoki z tego zakresu są w przygotowaniu.';
+      else if (bezWydarzen.length === pokrywa.length) pusto.textContent = 'Epoka ' + bezWydarzen.map(function (e) { return e.od + '–' + e.do; }).join(', ') + ' jest opracowana, ale w sprawdzonych źródłach nie ma w niej potwierdzonych wydarzeń. To brak dowodu, a nie dowód, że nic się nie działo.';
+      else pusto.textContent = 'W tym zakresie lat nie ma wydarzeń przy obecnych ustawieniach.';
       pusto.hidden = false;
     } else { pusto.hidden = true; }
     var poza = D.events.filter(function (e) { return pewnoscOk(e) && !e.na_mapie; }).length;
@@ -489,7 +492,8 @@
   var odcinki = [];
   function budujSkale() {
     var suma = 0;
-    D.epoki.forEach(function (e) { e.waga = e.gotowa ? 3 : 1; suma += e.waga; });
+    // Szerszy odcinek dostają tylko epoki, w których są wydarzenia do wskazania na suwaku.
+    D.epoki.forEach(function (e) { e.waga = e.gotowa && e.ile ? 3 : 1; suma += e.waga; });
     var p = 0;
     odcinki = D.epoki.map(function (e) { var o = { od: e.od, do: e.do, p0: p, p1: p + e.waga / suma, e: e }; p = o.p1; return o; });
   }
@@ -527,7 +531,7 @@
       .attr('type', 'button').attr('tabindex', -1)
       .attr('class', function (o) { return 'epoka ' + (o.e.gotowa ? 'epoka-gotowa' : 'epoka-wkrotce'); })
       .style('left', function (o) { return o.p0 * 100 + '%'; }).style('width', function (o) { return (o.p1 - o.p0) * 100 + '%'; })
-      .attr('title', function (o) { return o.od + '–' + o.do + ': ' + (o.e.gotowa ? 'opracowane' : 'w przygotowaniu'); })
+      .attr('title', function (o) { return o.od + '–' + o.do + ': ' + (!o.e.gotowa ? 'w przygotowaniu' : o.e.ile ? 'opracowane' : 'opracowane, brak potwierdzonych wydarzeń'); })
       .attr('aria-label', function (o) { return 'Pokaż lata ' + o.od + '–' + o.do; })
       .on('click', function (ev, o) { ustawLata(o.od, o.do); });
     var lata = {};

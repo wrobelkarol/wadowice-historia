@@ -111,8 +111,11 @@ def wybierz_pliki(katalog):
             print(f"  pomijam plik o nieznanej nazwie: {p.name}")
             continue
         wersja = int(m.group(2) or 1)
-        if m.group(1) not in wyb or wersja > wyb[m.group(1)][0]:
-            wyb[m.group(1)] = (wersja, p)
+        # Nazwy plików mają lata z zerami (0000-0966), a odcinki suwaka bez nich (0-966).
+        od, do = m.group(1).split("-")
+        klucz = f"{int(od)}-{int(do)}"
+        if klucz not in wyb or wersja > wyb[klucz][0]:
+            wyb[klucz] = (wersja, p)
     return {k: v[1] for k, v in wyb.items()}
 
 
@@ -496,11 +499,15 @@ def strona_o_projekcie(wyd, epoki, wygenerowano, projekt):
         cz = [x for x in [e(str(z["autor"])) if z.get("autor") else None, tyt, e(str(z["rok"])) if z.get("rok") else None] if x]
         lista_zr.append("<li>" + ", ".join(cz) + "</li>")
     repo = projekt.get("repozytorium")
+    puste_epoki = "".join(
+        f'<p>Epoka {x["od"]}–{x["do"]} jest opracowana, ale w sprawdzonych źródłach nie ma w niej żadnego potwierdzonego wydarzenia z tego obszaru. '
+        "To brak dowodu, a nie dowód, że nic się wtedy nie działo.</p>\n"
+        for x in epoki if x["gotowa"] and not x["ile"])
 
     t = f"""<h1>O projekcie</h1>
 <p class="opis">Mapa pokazuje udokumentowane wydarzenia z lat 0–1945 na terenie dzisiejszego powiatu wadowickiego: bitwy, najazdy, przemarsze i kwaterunki wojsk, pożary, epidemie i inne. Dane powstają epokami.</p>
 <p>Opracowane epoki: <b>{e(', '.join(gotowe))}</b>. W przygotowaniu: {e(', '.join(wkrotce))}.</p>
-
+{puste_epoki}
 <h2>Skąd są dane</h2>
 <p>Agenci AI szukali wydarzeń w źródłach: Wikipedii, Słowniku geograficznym Królestwa Polskiego, artykułach naukowych i na stronach lokalnych. Osobny agent sprawdził każdy rekord w źródle: w epoce 1648–1772 znaleziono w tekstach źródeł wszystkie 131 cytatów. Dane są wiarygodne, ale niekompletne. Opisy są własnymi parafrazami, a krótkie cytaty przy źródłach podano w języku oryginału.</p>
 <p>Rekordy na stronie po scaleniu duplikatów: {len(wyd)} (pewność A: {ile['A']}, B: {ile['B']}, C: {ile['C']}, D: {ile['D']}). Rekordy niepotwierdzone i sprzeczne nie są pokazywane.</p>
@@ -566,8 +573,18 @@ def main():
     for k in pliki:
         if k not in klucze:
             print(f"  UWAGA: epoka {k} nie ma odcinka w dane/epoki.json")
+    status_badan = {}
+    plik_statusu = katalog / "epoki.json"
+    if plik_statusu.exists():
+        for x in json.loads(plik_statusu.read_text(encoding="utf-8")).get("epoki", []):
+            od, do = x["id"].split("-")
+            status_badan[f"{int(od)}-{int(do)}"] = x.get("status")
     for x in epoki:
-        x["gotowa"] = f'{x["od"]}-{x["do"]}' in pliki
+        klucz = f'{x["od"]}-{x["do"]}'
+        x["gotowa"] = klucz in pliki
+        x["ile"] = sum(1 for w in wyd if w["epoka"] == klucz)
+        if klucz in status_badan and (status_badan[klucz] == "opracowana") != x["gotowa"]:
+            print(f"  UWAGA: epoka {klucz}: data/epoki.json podaje „{status_badan[klucz]}”, a pliku zweryfikowanego {'jest' if x['gotowa'] else 'nie ma'}")
 
     wygenerowano = datetime.date.today().isoformat()
     obj = {"wygenerowano": wygenerowano, "atrybucja_mapy": "© OpenStreetMap contributors (ODbL)",
