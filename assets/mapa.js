@@ -436,12 +436,25 @@
       var pokrywa = D.epoki.filter(function (e) { return e.gotowa && e.od < stan.do && e.do > stan.od; });
       var bezWydarzen = pokrywa.filter(function (e) { return !e.ile; });
       if (!pokrywa.length) pusto.textContent = 'Epoki z tego zakresu są w przygotowaniu.';
-      else if (bezWydarzen.length === pokrywa.length) pusto.textContent = 'Epoka ' + bezWydarzen.map(function (e) { return e.od + '–' + e.do; }).join(', ') + ' jest opracowana, ale w sprawdzonych źródłach nie ma w niej potwierdzonych wydarzeń. To brak dowodu, a nie dowód, że nic się nie działo.';
+      else if (bezWydarzen.length === pokrywa.length) {
+        pusto.textContent = 'Epoka ' + bezWydarzen.map(function (e) { return e.od + '–' + e.do; }).join(', ') + ' jest opracowana, ale w sprawdzonych źródłach nie ma w niej potwierdzonych wydarzeń. To brak dowodu, a nie dowód, że nic się nie działo.';
+        if (bezWydarzen.some(function (e) { return e.hipotezy; })) {
+          var linkH = document.createElement('a');
+          linkH.href = 'wydarzenia/#hipotezy';
+          linkH.textContent = 'Zobacz hipotezy tła.';
+          pusto.appendChild(document.createTextNode(' '));
+          pusto.appendChild(linkH);
+        }
+      }
       else pusto.textContent = 'W tym zakresie lat nie ma wydarzeń przy obecnych ustawieniach.';
       pusto.hidden = false;
     } else { pusto.hidden = true; }
-    var poza = D.events.filter(function (e) { return pewnoscOk(e) && !e.na_mapie; }).length;
+    var poza = D.events.filter(function (e) { return pewnoscOk(e) && !e.na_mapie && !e.hipoteza; }).length;
     document.getElementById('link-poza-mapa').textContent = 'Regionalne i bez daty, tylko na liście: ' + poza;
+    var hipotezy = D.events.filter(function (e) { return e.hipoteza; }).length;
+    var lh2 = document.getElementById('link-hipotezy');
+    lh2.textContent = 'Hipotezy tła, tylko na liście: ' + hipotezy;
+    lh2.parentNode.hidden = !hipotezy;
   }
 
   /* ---------- dymek ---------- */

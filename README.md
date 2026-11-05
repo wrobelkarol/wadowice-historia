@@ -32,6 +32,7 @@ Epoka zapala się na suwaku sama, jeśli jej lata są w `dane/epoki.json`. Nowy 
 
 - `dane/lokalizacje_wydarzen.json`: obszar wydarzenia, gdy nie wynika wprost z pól rekordu (id → miejscowości, notatka, `przyblizony`).
 - `dane/etykiety.json`: krótszy napis na mapie.
+- `dane/hipotezy.json`: rekordy niepotwierdzone jako zdarzenia, pokazywane jako hipotezy tła (id → notatka). Dostają podstronę i sekcję na liście, ale nie trafiają na mapę ani do liczby wydarzeń. Status w danych badawczych się nie zmienia.
 - `dane/slugi.json`: adresy podstron. Skrypt tylko dopisuje nowe, dzięki czemu adresy są stałe nawet po zmianie tytułu.
 - `dane/projekt.json`: adres repozytorium widoczny w „O projekcie”.
 - `assets/konfiguracja.js`: progi skali, granice 10 gmin powiatu (`gminyWewnetrzne`, domyślnie wyłączone), domyślny zakres lat.

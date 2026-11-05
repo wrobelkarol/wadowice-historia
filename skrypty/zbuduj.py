@@ -178,7 +178,7 @@ def buduj_rekordy(pliki, ustawienia):
             if not linia.strip():
                 continue
             r = json.loads(linia)
-            if not czy_pokazac(r):
+            if not czy_pokazac(r) and r["id"] not in ustawienia["hipotezy"]:
                 continue
             rok_od = czesci(r["data_od"])[0] if r["data_od"] else None
             rok_do = czesci(r["data_do"])[0] if r["data_do"] else rok_od
@@ -205,6 +205,12 @@ def buduj_rekordy(pliki, ustawienia):
             }
             if r["weryfikacja"]["status"] == "czesciowo":
                 w["weryfikacja"]["uwagi"] = r["weryfikacja"].get("uwagi", "")
+
+            if r["id"] in ustawienia["hipotezy"]:
+                # Hipoteza nie jest zdarzeniem: bez geometrii, tylko własna podstrona i sekcja listy.
+                w.update(hipoteza=True, notatka_hipotezy=ustawienia["hipotezy"][r["id"]], powod_listy="hipoteza")
+                wyn.append(w)
+                continue
 
             usta = lok.get(r["id"], {})
             w["notatka_lokalizacji"] = usta.get("notatka", "")
@@ -281,9 +287,13 @@ def buduj_rekordy(pliki, ustawienia):
     wyn.sort(key=klucz_daty)
     for w in wyn:
         del w["_data_od"]
-    for i, w in enumerate(wyn):
-        w["poprzednie"] = wyn[i - 1]["slug"] if i else None
-        w["nastepne"] = wyn[i + 1]["slug"] if i + 1 < len(wyn) else None
+    # Poprzednie i następne prowadzą tylko po wydarzeniach, nie po hipotezach.
+    lancuch = [w for w in wyn if not w.get("hipoteza")]
+    for w in wyn:
+        w["poprzednie"] = w["nastepne"] = None
+    for i, w in enumerate(lancuch):
+        w["poprzednie"] = lancuch[i - 1]["slug"] if i else None
+        w["nastepne"] = lancuch[i + 1]["slug"] if i + 1 < len(lancuch) else None
     return wyn, obszary, uzyte_miejsca, ostrzezenia, slugi
 
 
@@ -326,6 +336,8 @@ def strona(tytul, tresc, glebokosc, wygenerowano, opis="", skrypty=""):
 
 def podstrona_wydarzenia(w, wg_sluga, wymiary, obszary_ind, wygenerowano):
     t = [f'<p class="data-wydarzenia">{e(w["data"])}</p>', f'<h1>{e(w["tytul"])}</h1>']
+    if w.get("hipoteza"):
+        t.append(f'<p class="plakietka plakietka-legenda"><span><b class="znak-hipotezy">Hipoteza.</b> {e(w["notatka_hipotezy"])}</span></p>')
     if w["data_uwagi"]:
         t.append(f'<p class="uwagi">{e(w["data_uwagi"])}</p>')
     miejsce = w["miejscowosc"] or "region, bez jednej miejscowości"
@@ -378,7 +390,8 @@ def podstrona_wydarzenia(w, wg_sluga, wymiary, obszary_ind, wygenerowano):
     nav.append(f'<a data-z-stanem href="../{pop["slug"]}/"><small>← Poprzednie, {e(pop["data"])}</small>{e(pop["tytul"])}</a>' if pop else "<span></span>")
     nav.append(f'<a class="nast" data-z-stanem href="../{nast["slug"]}/"><small>Następne, {e(nast["data"])} →</small>{e(nast["tytul"])}</a>' if nast else "<span></span>")
     nav.append("</nav>")
-    t.append("".join(nav))
+    if pop or nast:
+        t.append("".join(nav))
     t.append('<p><a data-z-stanem href="../../"><b>← Wróć do mapy</b></a></p>')
     return strona(w["tytul"], "\n".join(t), 2, wygenerowano, opis=w["opis"][:150])
 
@@ -405,6 +418,8 @@ def mini_mapa(w, wym, obszary_ind):
         x, y = geo.rzut(f["properties"]["etykieta"])
         warstwy.append(f'<text x="{x:.2f}" y="{y:.2f}" text-anchor="middle" class="mini-etykieta">{e(w["miejsce_obszaru"] if "," not in w["miejsce_obszaru"] else "")}</text>')
         podpis = "Obszar to dzisiejsze granice miejscowości z OSM." if not w["przyblizony"] else "Obszar przybliżony, zbudowany z dzisiejszych granic miejscowości z OSM."
+    elif w.get("hipoteza"):
+        podpis = "Hipoteza nie wskazuje jednego miejsca, dlatego nie ma jej na mapie."
     elif w["powod_listy"] == "regionalne":
         podpis = "Wydarzenie regionalne: źródło nie wskazuje jednego miejsca, dlatego nie ma go na mapie."
     elif w["powod_listy"] == "poza zasięgiem mapy":
@@ -462,20 +477,25 @@ def pozycja_listy(w, kierunek="../"):
 
 def strona_listy(wyd, wygenerowano):
     na = [w for w in wyd if w["na_mapie"]]
-    poza = [w for w in wyd if not w["na_mapie"]]
+    poza = [w for w in wyd if not w["na_mapie"] and not w.get("hipoteza")]
+    hip = [w for w in wyd if w.get("hipoteza")]
     t = ["<h1>Wszystkie wydarzenia</h1>",
-         f'<p>Na tej liście są wszystkie rekordy, także słabiej udokumentowane (pewność C) i te, których nie ma na mapie. Razem: {len(wyd)}. Litera przy wydarzeniu to pewność, wyjaśniona na stronie <a data-z-stanem href="../o-projekcie/">O projekcie</a>.</p>',
+         f'<p>Na tej liście są wszystkie rekordy, także słabiej udokumentowane (pewność C) i te, których nie ma na mapie. Razem: {len(na) + len(poza)}{" oraz hipotezy na końcu listy" if hip else ""}. Litera przy wydarzeniu to pewność, wyjaśniona na stronie <a data-z-stanem href="../o-projekcie/">O projekcie</a>.</p>',
          '<label for="filtr" style="font-weight:600">Szukaj w tytułach, opisach i nazwach miejsc</label>',
          '<input id="filtr" class="filtr" type="search" autocomplete="off" placeholder="np. Lanckorona, pożar, Suworow">',
          '<p id="licznik" class="licznik" role="status"></p>',
          f'<section class="sekcja-wykaz"><h2>Na mapie, chronologicznie</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in na)}</ul></section>',
          f'<section class="sekcja-wykaz" id="poza-mapa"><h2>Tylko na liście: regionalne, poza zasięgiem mapy, bez daty</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in poza)}</ul></section>']
+    if hip:
+        t.append(f'<section class="sekcja-wykaz" id="hipotezy"><h2>Hipotezy: tło, nie potwierdzone wydarzenia</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in hip)}</ul></section>')
     return strona("Wszystkie wydarzenia: powiat wadowicki", "\n".join(t), 1, wygenerowano,
                   opis="Chronologiczna lista wydarzeń historycznych na terenie powiatu wadowickiego.",
                   skrypty='<script src="../assets/lista.js"></script>')
 
 
-def strona_o_projekcie(wyd, epoki, wygenerowano, projekt):
+def strona_o_projekcie(wszystkie, epoki, wygenerowano, projekt):
+    wyd = [w for w in wszystkie if not w.get("hipoteza")]
+    hip = [w for w in wszystkie if w.get("hipoteza")]
     gminy = ["Andrychów", "Brzeźnica", "Kalwaria Zebrzydowska", "Lanckorona", "Mucharz", "Spytkowice", "Stryszów", "Tomice", "Wadowice", "Wieprz"]
     z_wyd = {w["gmina"] for w in wyd if w["gmina"]}
     puste = [g for g in gminy if g not in z_wyd]
@@ -484,7 +504,7 @@ def strona_o_projekcie(wyd, epoki, wygenerowano, projekt):
     ile = {p: sum(1 for w in wyd if w["pewnosc"] == p) for p in "ABCD"}
 
     zrodla = {}
-    for w in wyd:
+    for w in wszystkie:
         for z in w["zrodla"]:
             kl = z.get("url") or z.get("tytul")
             if kl and kl not in zrodla:
@@ -499,6 +519,10 @@ def strona_o_projekcie(wyd, epoki, wygenerowano, projekt):
         cz = [x for x in [e(str(z["autor"])) if z.get("autor") else None, tyt, e(str(z["rok"])) if z.get("rok") else None] if x]
         lista_zr.append("<li>" + ", ".join(cz) + "</li>")
     repo = projekt.get("repozytorium")
+    hipotezy_txt = ""
+    if hip:
+        linki = ", ".join(f'<a data-z-stanem href="../{w["url"]}">{e(w["tytul"])}</a>' for w in hip)
+        hipotezy_txt = f"<p>Osobno pokazujemy hipotezy tła: {linki}. Nie są to potwierdzone wydarzenia, nie ma ich na mapie i nie wchodzą do powyższych liczb.</p>\n"
     puste_epoki = "".join(
         f'<p>Epoka {x["od"]}–{x["do"]} jest opracowana, ale w sprawdzonych źródłach nie ma w niej żadnego potwierdzonego wydarzenia z tego obszaru. '
         "To brak dowodu, a nie dowód, że nic się wtedy nie działo.</p>\n"
@@ -510,8 +534,8 @@ def strona_o_projekcie(wyd, epoki, wygenerowano, projekt):
 {puste_epoki}
 <h2>Skąd są dane</h2>
 <p>Agenci AI szukali wydarzeń w źródłach: Wikipedii, Słowniku geograficznym Królestwa Polskiego, artykułach naukowych i na stronach lokalnych. Osobny agent sprawdził każdy rekord w źródle: w epoce 1648–1772 znaleziono w tekstach źródeł wszystkie 131 cytatów. Dane są wiarygodne, ale niekompletne. Opisy są własnymi parafrazami, a krótkie cytaty przy źródłach podano w języku oryginału.</p>
-<p>Rekordy na stronie po scaleniu duplikatów: {len(wyd)} (pewność A: {ile['A']}, B: {ile['B']}, C: {ile['C']}, D: {ile['D']}). Rekordy niepotwierdzone i sprzeczne nie są pokazywane.</p>
-
+<p>Rekordy na stronie po scaleniu duplikatów: {len(wyd)} (pewność A: {ile['A']}, B: {ile['B']}, C: {ile['C']}, D: {ile['D']}). Rekordy niepotwierdzone i sprzeczne nie są pokazywane jako wydarzenia.</p>
+{hipotezy_txt}
 <h2>Jak liczona jest pewność</h2>
 <dl class="metryka">
 <dt><b>A</b></dt><dd>Co najmniej dwa niezależne źródła, w tym naukowe, encyklopedyczne lub pierwotne.</dd>
@@ -561,10 +585,12 @@ def main():
     ustawienia = {
         "lok": wczytaj_json(DANE / "lokalizacje_wydarzen.json", {}),
         "etykiety": wczytaj_json(DANE / "etykiety.json", {}),
+        "hipotezy": wczytaj_json(DANE / "hipotezy.json", {}),
         "slugi": wczytaj_json(DANE / "slugi.json", {}),
     }
     ustawienia["lok"].pop("_opis", None)
     ustawienia["etykiety"].pop("_opis", None)
+    ustawienia["hipotezy"].pop("_opis", None)
     wyd, obszary, uzyte, ostrzezenia, slugi = buduj_rekordy(pliki, ustawienia)
     (DANE / "slugi.json").write_text(json.dumps(slugi, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
 
@@ -582,7 +608,8 @@ def main():
     for x in epoki:
         klucz = f'{x["od"]}-{x["do"]}'
         x["gotowa"] = klucz in pliki
-        x["ile"] = sum(1 for w in wyd if w["epoka"] == klucz)
+        x["ile"] = sum(1 for w in wyd if w["epoka"] == klucz and not w.get("hipoteza"))
+        x["hipotezy"] = sum(1 for w in wyd if w["epoka"] == klucz and w.get("hipoteza"))
         if klucz in status_badan and (status_badan[klucz] == "opracowana") != x["gotowa"]:
             print(f"  UWAGA: epoka {klucz}: data/epoki.json podaje „{status_badan[klucz]}”, a pliku zweryfikowanego {'jest' if x['gotowa'] else 'nie ma'}")
 
@@ -604,7 +631,8 @@ def main():
     zapisz(ROOT / "o-projekcie" / "index.html", strona_o_projekcie(wyd, epoki, wygenerowano, wczytaj_json(DANE / "projekt.json", {})))
 
     na = [w for w in wyd if w["na_mapie"]]
-    print(f"Rekordy: {len(wyd)}; na mapie: {len(na)} (punkty {sum(w['rodzaj'] == 'punkt' for w in na)}, obszary {sum(w['rodzaj'] == 'obszar' for w in na)})")
+    print(f"Hipotezy: {sum(1 for w in wyd if w.get('hipoteza'))}")
+    print(f"Rekordy: {sum(1 for w in wyd if not w.get('hipoteza'))}; na mapie: {len(na)} (punkty {sum(w['rodzaj'] == 'punkt' for w in na)}, obszary {sum(w['rodzaj'] == 'obszar' for w in na)})")
     print("Domyślnie widoczne (A, B):", sum(w["pewnosc"] in "AB" for w in na), "; wszystkie A, B:", sum(w["pewnosc"] in "AB" for w in wyd))
     for w in wyd:
         if not w["na_mapie"]:
