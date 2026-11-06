@@ -274,7 +274,7 @@ def buduj_rekordy(pliki, ustawienia):
                 obszary.append({"type": "Feature", "geometry": {"type": "MultiLineString", "coordinates": linie}, "properties": {
                     "id": oid, "etykieta": wnetrze[len(wnetrze) // 2]}})
                 w.update(rodzaj="linia", obszar=oid, linia_typ="rzeka" if usta.get("rzeka") else "trasa", etykieta_xy=obszary[-1]["properties"]["etykieta"])
-            elif r["typ"] in TYPY_OBSZAROWE:
+            elif r["typ"] in TYPY_OBSZAROWE or (obszarowe and usta.get("miejscowosci")):
                 nazwy = usta.get("miejscowosci") or ([r["miejscowosc"]] if r["miejscowosc"] else [])
                 w["przyblizony"] = bool(usta.get("przyblizony"))
                 pierscienie, opisane, brak = [], [], []
@@ -478,7 +478,7 @@ def mini_mapa(w, wym, obszary_ind):
         for pol in f["geometry"]["coordinates"]:
             for r in pol:
                 d += "M" + "L".join(f"{geo.rzut(p)[0]:.2f} {geo.rzut(p)[1]:.2f}" for p in r) + "Z"
-        kol = {"epidemia": ("#f5c800", "#a88900"), "epizootia": ("#e8791e", "#a8540f"), "glod": ("#8a5a2b", "#5f3c1b")}[w["typ"]]
+        kol = {"epidemia": ("#f5c800", "#a88900"), "epizootia": ("#e8791e", "#a8540f"), "glod": ("#8a5a2b", "#5f3c1b"), "osadnictwo": ("#6f9a5a", "#47703a")}[w["typ"]]
         warstwy.append(f'<path d="{d}" fill="{kol[0]}" fill-opacity="0.5" fill-rule="evenodd" stroke="{kol[1]}" stroke-width="0.12"/>')
         x, y = geo.rzut(f["properties"]["etykieta"])
         warstwy.append(f'<text x="{x:.2f}" y="{y:.2f}" text-anchor="middle" class="mini-etykieta">{e(w["miejsce_obszaru"] if "," not in w["miejsce_obszaru"] else "")}</text>')

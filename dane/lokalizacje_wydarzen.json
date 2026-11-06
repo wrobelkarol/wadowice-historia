@@ -1,5 +1,10 @@
 {
   "_opis": "Ręczne wskazanie obszaru, gdy nie wynika wprost z pól rekordu. id → miejscowości (nazwy z OSM), notatka widoczna na podstronie, przyblizony: oznaczenie „obszar przybliżony”, linia: schematyczna trasa przez miejscowości, rzeka: plik z dane/geo, lata: osobne lata dla suwaka, data_tekst: data do pokazania, gdy lata nie tworzą ciągłego okresu. Bez wpisu i bez miejscowości rekord zostaje tylko na liście.",
+  "0000-0966-C-011": {
+    "miejscowosci": ["Sosnowice", "Stronie", "Spytkowice"],
+    "notatka": "Źródło mówi o górnej Skawie i jej dopływach, a jako przesłanki podaje stanowiska z trzech miejsc. Zaznaczono dzisiejsze granice tych wsi, a nie całą dolinę, której zasięgu źródło nie określa. To miejsca znalezisk, nie granice dawnego osadnictwa.",
+    "przyblizony": true
+  },
   "1772-1815-C-008": {
     "data_tekst": "1802, 1805, 1812, 1814",
     "lata": [1802, 1805, 1812, 1814],

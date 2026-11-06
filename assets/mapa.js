@@ -92,7 +92,7 @@
     D.obszaryWgId = {};
     D.obszary.features.forEach(function (f) { D.obszaryWgId[f.properties.id] = f; });
     // Epidemia leży na spodzie; zaraza bydła i głód na tym samym obszarze rysują się na niej kreskowaniem.
-    var kolejnosc = { epidemia: 0, epizootia: 1, glod: 2 };
+    var kolejnosc = { osadnictwo: -1, epidemia: 0, epizootia: 1, glod: 2 };
     var obs = D.events.filter(function (e) { return e.rodzaj === 'obszar' && e.na_mapie; })
       .sort(function (a, b) { return kolejnosc[a.typ] - kolejnosc[b.typ]; });
     d3.select('#w-obszary').selectAll('path').data(obs, function (e) { return e.id; }).join('path')
@@ -522,8 +522,8 @@
   var odcinki = [];
   function budujSkale() {
     var suma = 0;
-    // Szerszy odcinek dostają tylko epoki, w których są wydarzenia do wskazania na suwaku.
-    D.epoki.forEach(function (e) { e.waga = e.gotowa && e.na_mapie ? 3 : 1; suma += e.waga; });
+    // Szerszy odcinek dostają tylko epoki z większą liczbą wydarzeń do wskazania na suwaku.
+    D.epoki.forEach(function (e) { e.waga = e.gotowa && e.na_mapie >= 5 ? 3 : 1; suma += e.waga; });
     var p = 0;
     odcinki = D.epoki.map(function (e) { var o = { od: e.od, do: e.do, p0: p, p1: p + e.waga / suma, e: e }; p = o.p1; return o; });
   }

@@ -10,6 +10,7 @@
   --epizootia: #e8791e;
   --glod: #8a5a2b;
   --rzeka: #2f6f9f;
+  --osadnictwo: #6f9a5a;
   --kroj: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
 }
 * { box-sizing: border-box; }
@@ -42,6 +43,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-vis
 .obszar-epidemia { fill: var(--epidemia); fill-opacity: 0.42; stroke: #a88900; }
 .obszar-epizootia { fill: var(--epizootia); fill-opacity: 0.38; stroke: #a8540f; }
 .obszar-glod { fill: var(--glod); fill-opacity: 0.38; stroke: #5f3c1b; }
+.obszar-osadnictwo { fill: var(--osadnictwo); fill-opacity: 0.4; stroke: #47703a; }
 .obszar-c { stroke-dasharray: 4 3; fill-opacity: 0.24; }
 
 .linia { cursor: pointer; outline: none; }
@@ -107,6 +109,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-vis
 .ob-epidemia { fill: var(--epidemia); fill-opacity: 0.45; stroke: #a88900; }
 .ob-epizootia { fill: var(--epizootia); fill-opacity: 0.42; stroke: #a8540f; }
 .ob-glod { fill: var(--glod); fill-opacity: 0.42; stroke: #5f3c1b; }
+.ob-osadnictwo { fill: var(--osadnictwo); fill-opacity: 0.45; stroke: #47703a; }
 .li-powiat { stroke: var(--czern); stroke-width: 3; }
 .li-gmina { stroke: var(--ciemny); stroke-width: 1; }
 .przelacznik { display: flex; gap: 7px; align-items: flex-start; padding-top: 8px; border-top: 1px solid var(--linia); cursor: pointer; line-height: 1.35; }
