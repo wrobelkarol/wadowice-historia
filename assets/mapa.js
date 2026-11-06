@@ -91,6 +91,8 @@
     D.events.forEach(function (e) { if (e.obszar) { (uzyte[e.obszar] = uzyte[e.obszar] || []).push(e); } });
     D.obszaryWgId = {};
     D.obszary.features.forEach(function (f) { D.obszaryWgId[f.properties.id] = f; });
+    // Pliki mogą chwilowo pochodzić z różnych publikacji (pamięć podręczna). Bez geometrii wydarzenie zostaje na liście.
+    D.events.forEach(function (e) { if (e.obszar && !D.obszaryWgId[e.obszar]) e.na_mapie = false; });
     // Epidemia leży na spodzie; zaraza bydła i głód na tym samym obszarze rysują się na niej kreskowaniem.
     var kolejnosc = { osadnictwo: -1, epidemia: 0, epizootia: 1, glod: 2 };
     var obs = D.events.filter(function (e) { return e.rodzaj === 'obszar' && e.na_mapie; })

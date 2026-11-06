@@ -7,6 +7,7 @@ Tylko biblioteka standardowa.
 """
 import argparse
 import datetime
+import hashlib
 import html
 import json
 import pathlib
@@ -270,7 +271,7 @@ def buduj_rekordy(pliki, ustawienia):
                         ostrzezenia.append(f"{r['id']}: brak punktu trasy w OSM: {usta['linia']}")
                     linie = [[f["geometry"]["coordinates"] for f in pkt if f]]
                 wnetrze = probki_w_zasiegu(linie, zasieg)
-                oid = f"L{len(obszary) + 1}"
+                oid = "L" + hashlib.md5(r["id"].encode("utf-8")).hexdigest()[:8]
                 obszary.append({"type": "Feature", "geometry": {"type": "MultiLineString", "coordinates": linie}, "properties": {
                     "id": oid, "etykieta": wnetrze[len(wnetrze) // 2]}})
                 w.update(rodzaj="linia", obszar=oid, linia_typ="rzeka" if usta.get("rzeka") else "trasa", etykieta_xy=obszary[-1]["properties"]["etykieta"])
@@ -301,7 +302,8 @@ def buduj_rekordy(pliki, ustawienia):
                         rs = geo.rozpusc(pierscienie) if len(opisane) > 1 else pierscienie
                         rs = [x for x in rs if len(x) >= 4]
                         geom = {"type": "MultiPolygon", "coordinates": [[x] for x in rs]}
-                        oid = f"O{len(obszary) + 1}"
+                        # Identyfikator zależy od treści, nie od kolejności: nowe dane nie przesuwają starych numerów.
+                        oid = "O" + hashlib.md5(klucz.encode("utf-8")).hexdigest()[:8]
                         indeks_ob[klucz] = oid
                         obszary.append({"type": "Feature", "geometry": geom, "properties": {
                             "id": oid, "miejsca": opisane, "etykieta": geo.punkt_etykiety(geom)}})
