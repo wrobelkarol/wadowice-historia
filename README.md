@@ -28,6 +28,8 @@ Potem otwórz http://localhost:8765/.
 
 Epoka zapala się na suwaku sama, jeśli jej lata są w `dane/epoki.json`. Nowy zakres lat dopisz tam.
 
+Skrypt respektuje `data/epoki.json` z projektu badawczego. Epoka o statusie innym niż `opracowana` jest na suwaku „w przygotowaniu”, a jej rekordy nie trafiają na stronę (poza hipotezami z `dane/hipotezy.json`, czytanymi z ostatniej zakończonej weryfikacji, czyli najstarszego pliku). Po zmianie statusu na `opracowana` skrypt weźmie najnowszą wersję.
+
 ## Pliki, które można poprawiać ręcznie
 
 - `dane/lokalizacje_wydarzen.json`: obszar wydarzenia, gdy nie wynika wprost z pól rekordu (id → miejscowości, notatka, `przyblizony`).

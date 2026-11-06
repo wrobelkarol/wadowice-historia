@@ -1,5 +1,8 @@
 {
-  "_opis": "Ręczne wskazanie obszaru, gdy nie wynika wprost z pól rekordu. id → miejscowości (nazwy z OSM), notatka widoczna na podstronie, przyblizony: oznaczenie „obszar przybliżony”. Bez wpisu i bez miejscowości rekord zostaje tylko na liście.",
+  "_opis": "Ręczne wskazanie obszaru, gdy nie wynika wprost z pól rekordu. id → miejscowości (nazwy z OSM), notatka widoczna na podstronie, przyblizony: oznaczenie „obszar przybliżony”, data_tekst: data do pokazania, gdy lata nie tworzą ciągłego okresu. Bez wpisu i bez miejscowości rekord zostaje tylko na liście.",
+  "1772-1815-C-008": {
+    "data_tekst": "1802, 1805, 1812, 1814"
+  },
   "1648-1772-A-008": {
     "miejscowosci": ["Lanckorona", "Barwałd Dolny", "Barwałd Średni", "Barwałd Górny", "Klecza Dolna", "Klecza Górna", "Kęty"],
     "notatka": "Notatka proboszcza wymienia Kraków, Kęty, Kleczę, Barwałd i Lanckoronę. Barwałd i Klecza to dziś po kilka wsi, źródło ich nie rozróżnia, więc zaznaczono wszystkie. Kraków leży poza zasięgiem mapy.",

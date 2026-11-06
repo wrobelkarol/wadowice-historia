@@ -28,7 +28,8 @@ NAZWY_TYPOW = {
     "kwaterunek_rekwizycje": "kwaterunek i rekwizycje", "partyzantka_konspiracja": "partyzantka i konspiracja",
     "represje_egzekucja": "represje, egzekucja", "zniszczenie_pozar": "zniszczenie, pożar", "epidemia": "epidemia",
     "epizootia": "epizootia (zaraza bydła)", "glod": "głód", "powstanie_bunt": "powstanie, bunt",
-    "zmiana_wladzy_granic": "zmiana władzy lub granic", "mobilizacja_werbunek": "mobilizacja, werbunek", "inne": "inne",
+    "zmiana_wladzy_granic": "zmiana władzy lub granic", "mobilizacja_werbunek": "mobilizacja, werbunek", "migracja_ludow": "migracja ludów",
+    "szlak_handlowy": "szlak handlowy", "wyprawa": "wyprawa", "osadnictwo": "osadnictwo", "inne": "inne",
 }
 PEWNOSC = {
     "A": "co najmniej dwa niezależne źródła, w tym naukowe, encyklopedyczne lub pierwotne",
@@ -98,25 +99,44 @@ def krotka_etykieta(rek, nadpisania):
     t = re.sub(r"\s*\([^)]*\d[^)]*\)\s*$", "", t)
     t = re.sub(r"\s*\(lat[^)]*$", "", t)
     if not re.search(r"przed\s+\d{3,4}(\s*r\.)?$", t):
-        t = re.sub(r"[\s,]*(ok\.\s*)?\d{3,4}([–/-]\d{2,4})?(\s*r\.)?$", "", t)
+        t = re.sub(r"[\s,]*(ok\.\s*)?([IVX]+\s+)?\d{3,4}([–/-]\d{2,4})?(\s*r\.)?$", "", t)
     return t.strip(" ,")
 
 
-def wybierz_pliki(katalog):
-    """Dla każdej epoki najnowsza wersja: _v2 ma pierwszeństwo przed plikiem bez sufiksu."""
-    wyb = {}
+def wczytaj_statusy(katalog):
+    """Status epok z data/epoki.json (projekt badawczy); brak pliku lub wpisu = decyduje obecność pliku."""
+    plik = katalog / "epoki.json"
+    if not plik.exists():
+        return {}
+    wynik = {}
+    for x in json.loads(plik.read_text(encoding="utf-8")).get("epoki", []):
+        od, do = x["id"].split("-")
+        wynik[f"{int(od)}-{int(do)}"] = x.get("status")
+    return wynik
+
+
+def wybierz_pliki(katalog, statusy):
+    """Dla epoki opracowanej najnowsza wersja (_v2 przed plikiem bez sufiksu).
+    Dla epoki w toku najstarsza, czyli ostatnia zakończona weryfikacja: nowsza może być niedokończona.
+    Z takiej epoki pokazujemy tylko hipotezy wskazane w dane/hipotezy.json."""
+    wersje = {}
     for p in sorted(katalog.glob("*_zweryfikowane*.jsonl")):
         m = re.match(r"^(\d+-\d+)_zweryfikowane(?:_v(\d+))?\.jsonl$", p.name)
         if not m:
             print(f"  pomijam plik o nieznanej nazwie: {p.name}")
             continue
-        wersja = int(m.group(2) or 1)
         # Nazwy plików mają lata z zerami (0000-0966), a odcinki suwaka bez nich (0-966).
         od, do = m.group(1).split("-")
-        klucz = f"{int(od)}-{int(do)}"
-        if klucz not in wyb or wersja > wyb[klucz][0]:
-            wyb[klucz] = (wersja, p)
-    return {k: v[1] for k, v in wyb.items()}
+        wersje.setdefault(f"{int(od)}-{int(do)}", []).append((int(m.group(2) or 1), p))
+    wyb = {}
+    for klucz, lista in wersje.items():
+        lista.sort(key=lambda x: x[0])
+        if statusy.get(klucz, "opracowana") == "opracowana":
+            wyb[klucz] = lista[-1][1]
+        else:
+            wyb[klucz] = lista[0][1]
+            print(f"  epoka {klucz} ma status „{statusy[klucz]}”: czytam {lista[0][1].name}, tylko hipotezy z dane/hipotezy.json; pomijam nowsze: {[x[1].name for x in lista[1:]]}")
+    return wyb
 
 
 def czy_pokazac(rek):
@@ -178,6 +198,8 @@ def buduj_rekordy(pliki, ustawienia):
             if not linia.strip():
                 continue
             r = json.loads(linia)
+            if epoka in ustawienia["w_toku"] and r["id"] not in ustawienia["hipotezy"]:
+                continue
             if not czy_pokazac(r) and r["id"] not in ustawienia["hipotezy"]:
                 continue
             rok_od = czesci(r["data_od"])[0] if r["data_od"] else None
@@ -206,13 +228,21 @@ def buduj_rekordy(pliki, ustawienia):
             if r["weryfikacja"]["status"] == "czesciowo":
                 w["weryfikacja"]["uwagi"] = r["weryfikacja"].get("uwagi", "")
 
-            if r["id"] in ustawienia["hipotezy"]:
+            if r.get("zasieg_opis"):
+                w["zasieg_opis"] = r["zasieg_opis"]
+            if r["id"] in ustawienia["hipotezy"] or r.get("hipoteza"):
                 # Hipoteza nie jest zdarzeniem: bez geometrii, tylko własna podstrona i sekcja listy.
-                w.update(hipoteza=True, notatka_hipotezy=ustawienia["hipotezy"][r["id"]], powod_listy="hipoteza")
+                notatka = ustawienia["hipotezy"].get(r["id"], "Źródło przedstawia to zjawisko jako hipotezę lub przedmiot sporu badaczy.")
+                w.update(hipoteza=True, notatka_hipotezy=notatka, powod_listy="hipoteza")
                 wyn.append(w)
                 continue
 
             usta = lok.get(r["id"], {})
+            if usta.get("data_tekst"):
+                w["data"] = w["data_krotka"] = usta["data_tekst"]
+            # Zjawisko obszarowe rysujemy tylko dla typów z kolorem (epidemia, epizootia, głód) i wskazanych miejscowości.
+            # Pozostałe mają zasięg opisany słownie (np. cyrkuł, dolina), więc zostają na liście.
+            obszarowe = r.get("charakter") == "obszar"
             w["notatka_lokalizacji"] = usta.get("notatka", "")
 
             if r["typ"] in TYPY_OBSZAROWE:
@@ -249,7 +279,7 @@ def buduj_rekordy(pliki, ustawienia):
                     oid = indeks_ob[klucz]
                     cecha = next(o for o in obszary if o["properties"]["id"] == oid)
                     w.update(rodzaj="obszar", obszar=oid, etykieta_xy=cecha["properties"]["etykieta"], miejsce_obszaru=", ".join(opisane))
-            elif r["miejscowosc"]:
+            elif r["miejscowosc"] and not obszarowe:
                 pf = miejsca.punkt(r["miejscowosc"], r["gmina"])
                 pt = None
                 if pf is not None:
@@ -271,6 +301,8 @@ def buduj_rekordy(pliki, ustawienia):
                 w["powod_listy"] = "bez daty"
             elif w["rodzaj"]:
                 w["na_mapie"] = True
+            elif obszarowe:
+                w["powod_listy"] = "zjawisko obszarowe"
             elif r["miejscowosc"]:
                 w["powod_listy"] = "poza zasięgiem mapy" if r["zakres"] != "powiat" else "brak współrzędnych"
             else:
@@ -340,12 +372,14 @@ def podstrona_wydarzenia(w, wg_sluga, wymiary, obszary_ind, wygenerowano):
         t.append(f'<p class="plakietka plakietka-legenda"><span><b class="znak-hipotezy">Hipoteza.</b> {e(w["notatka_hipotezy"])}</span></p>')
     if w["data_uwagi"]:
         t.append(f'<p class="uwagi">{e(w["data_uwagi"])}</p>')
-    miejsce = w["miejscowosc"] or "region, bez jednej miejscowości"
+    miejsce = w["miejscowosc"] or ("zjawisko obszarowe, bez jednej miejscowości" if w["powod_listy"] == "zjawisko obszarowe" else "region, bez jednej miejscowości")
     if w["szara"]:
         miejsce += " (poza powiatem)"
     meta = [("Miejsce", miejsce)]
     if w["gmina"]:
         meta.append(("Gmina", w["gmina"]))
+    if w.get("zasieg_opis"):
+        meta.append(("Zasięg", w["zasieg_opis"]))
     meta.append(("Typ", w["typ_nazwa"]))
     if w["strony"]:
         meta.append(("Strony", ", ".join(w["strony"])))
@@ -420,6 +454,8 @@ def mini_mapa(w, wym, obszary_ind):
         podpis = "Obszar to dzisiejsze granice miejscowości z OSM." if not w["przyblizony"] else "Obszar przybliżony, zbudowany z dzisiejszych granic miejscowości z OSM."
     elif w.get("hipoteza"):
         podpis = "Hipoteza nie wskazuje jednego miejsca, dlatego nie ma jej na mapie."
+    elif w["powod_listy"] == "zjawisko obszarowe":
+        podpis = "Źródła opisują zasięg tego zjawiska tylko słownie, dlatego nie ma go na mapie."
     elif w["powod_listy"] == "regionalne":
         podpis = "Wydarzenie regionalne: źródło nie wskazuje jednego miejsca, dlatego nie ma go na mapie."
     elif w["powod_listy"] == "poza zasięgiem mapy":
@@ -485,7 +521,7 @@ def strona_listy(wyd, wygenerowano):
          '<input id="filtr" class="filtr" type="search" autocomplete="off" placeholder="np. Lanckorona, pożar, Suworow">',
          '<p id="licznik" class="licznik" role="status"></p>',
          f'<section class="sekcja-wykaz"><h2>Na mapie, chronologicznie</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in na)}</ul></section>',
-         f'<section class="sekcja-wykaz" id="poza-mapa"><h2>Tylko na liście: regionalne, poza zasięgiem mapy, bez daty</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in poza)}</ul></section>']
+         f'<section class="sekcja-wykaz" id="poza-mapa"><h2>Tylko na liście: regionalne, obszarowe, poza zasięgiem mapy, bez daty</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in poza)}</ul></section>']
     if hip:
         t.append(f'<section class="sekcja-wykaz" id="hipotezy"><h2>Hipotezy: tło, nie potwierdzone wydarzenia</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in hip)}</ul></section>')
     return strona("Wszystkie wydarzenia: powiat wadowicki", "\n".join(t), 1, wygenerowano,
@@ -533,7 +569,7 @@ def strona_o_projekcie(wszystkie, epoki, wygenerowano, projekt):
 <p>Opracowane epoki: <b>{e(', '.join(gotowe))}</b>. W przygotowaniu: {e(', '.join(wkrotce))}.</p>
 {puste_epoki}
 <h2>Skąd są dane</h2>
-<p>Agenci AI szukali wydarzeń w źródłach: Wikipedii, Słowniku geograficznym Królestwa Polskiego, artykułach naukowych i na stronach lokalnych. Osobny agent sprawdził każdy rekord w źródle: w epoce 1648–1772 znaleziono w tekstach źródeł wszystkie 131 cytatów. Dane są wiarygodne, ale niekompletne. Opisy są własnymi parafrazami, a krótkie cytaty przy źródłach podano w języku oryginału.</p>
+<p>Agenci AI szukali wydarzeń w źródłach: Wikipedii, Słowniku geograficznym Królestwa Polskiego, artykułach naukowych i na stronach lokalnych. Osobny agent sprawdził każdy rekord w źródle: w epokach 1648–1772 i 1772–1815 znaleziono w tekstach źródeł wszystkie cytaty (131 i 57). Dane są wiarygodne, ale niekompletne. Opisy są własnymi parafrazami, a krótkie cytaty przy źródłach podano w języku oryginału.</p>
 <p>Rekordy na stronie po scaleniu duplikatów: {len(wyd)} (pewność A: {ile['A']}, B: {ile['B']}, C: {ile['C']}, D: {ile['D']}). Rekordy niepotwierdzone i sprzeczne nie są pokazywane jako wydarzenia.</p>
 {hipotezy_txt}
 <h2>Jak liczona jest pewność</h2>
@@ -553,7 +589,8 @@ def strona_o_projekcie(wszystkie, epoki, wygenerowano, projekt):
 <li>Mapa pokazuje dzisiejsze granice powiatu i gmin, choć wydarzenia działy się w innych ustrojach i podziałach administracyjnych.</li>
 <li>Kropka stoi w środku miejscowości według OSM, a nie w dokładnym miejscu zdarzenia. Kropki jednej miejscowości są rozsunięte tylko po to, by dało się je kliknąć.</li>
 <li>Obszar epidemii, zarazy bydła lub głodu to dzisiejsza granica wskazanej miejscowości. Gdy źródło jest mniej dokładne albo granicy brak, podstrona wydarzenia ma oznaczenie „obszar przybliżony”.</li>
-<li>Wydarzenia regionalne i rekordy bez roku są tylko na <a data-z-stanem href="../wydarzenia/#poza-mapa">liście</a>. Gdy źródła podają różne daty, opis różnic jest na podstronie wydarzenia.</li>
+<li>Zjawiska obszarowe, których zasięg źródła opisują tylko słownie (np. „cyrkuł myślenicki”, „dolina Skawy”), nie są rysowane: dawnych granic nie ma w danych, a rysowanie byłoby zgadywaniem.</li>
+<li>Wydarzenia regionalne, obszarowe i rekordy bez roku są tylko na <a data-z-stanem href="../wydarzenia/#poza-mapa">liście</a>. Gdy źródła podają różne daty, opis różnic jest na podstronie wydarzenia.</li>
 <li>Część źródeł papierowych i rękopiśmiennych nie została sprawdzona bezpośrednio, tylko przez opracowania, które je cytują.</li>
 </ul>
 
@@ -577,7 +614,8 @@ def main():
     arg.add_argument("--dane", default=str(ROOT.parent / "data"))
     a = arg.parse_args()
     katalog = pathlib.Path(a.dane)
-    pliki = wybierz_pliki(katalog)
+    statusy = wczytaj_statusy(katalog)
+    pliki = wybierz_pliki(katalog, statusy)
     if not pliki:
         raise SystemExit(f"Brak plików *_zweryfikowane*.jsonl w {katalog}")
     print("Pliki:", ", ".join(p.name for p in pliki.values()))
@@ -587,6 +625,7 @@ def main():
         "etykiety": wczytaj_json(DANE / "etykiety.json", {}),
         "hipotezy": wczytaj_json(DANE / "hipotezy.json", {}),
         "slugi": wczytaj_json(DANE / "slugi.json", {}),
+        "w_toku": {k for k in pliki if statusy.get(k, "opracowana") != "opracowana"},
     }
     ustawienia["lok"].pop("_opis", None)
     ustawienia["etykiety"].pop("_opis", None)
@@ -599,19 +638,13 @@ def main():
     for k in pliki:
         if k not in klucze:
             print(f"  UWAGA: epoka {k} nie ma odcinka w dane/epoki.json")
-    status_badan = {}
-    plik_statusu = katalog / "epoki.json"
-    if plik_statusu.exists():
-        for x in json.loads(plik_statusu.read_text(encoding="utf-8")).get("epoki", []):
-            od, do = x["id"].split("-")
-            status_badan[f"{int(od)}-{int(do)}"] = x.get("status")
     for x in epoki:
         klucz = f'{x["od"]}-{x["do"]}'
-        x["gotowa"] = klucz in pliki
+        x["gotowa"] = klucz in pliki and klucz not in ustawienia["w_toku"]
+        if statusy.get(klucz) == "opracowana" and klucz not in pliki:
+            print(f"  UWAGA: epoka {klucz}: data/epoki.json podaje „opracowana”, a pliku zweryfikowanego nie ma")
         x["ile"] = sum(1 for w in wyd if w["epoka"] == klucz and not w.get("hipoteza"))
         x["hipotezy"] = sum(1 for w in wyd if w["epoka"] == klucz and w.get("hipoteza"))
-        if klucz in status_badan and (status_badan[klucz] == "opracowana") != x["gotowa"]:
-            print(f"  UWAGA: epoka {klucz}: data/epoki.json podaje „{status_badan[klucz]}”, a pliku zweryfikowanego {'jest' if x['gotowa'] else 'nie ma'}")
 
     wygenerowano = datetime.date.today().isoformat()
     obj = {"wygenerowano": wygenerowano, "atrybucja_mapy": "© OpenStreetMap contributors (ODbL)",
