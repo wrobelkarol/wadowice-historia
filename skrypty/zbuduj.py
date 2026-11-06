@@ -445,6 +445,8 @@ def podstrona_wydarzenia(w, wg_sluga, wymiary, obszary_ind, wygenerowano):
         t.append(f'<p class="ob-przyblizony"><b>Przebieg przybliżony.</b> {e(w["notatka_lokalizacji"])}</p>')
     if w["rodzaj"] == "punkt" and w["przyblizony"]:
         t.append(f'<p class="ob-przyblizony"><b>Położenie przybliżone.</b> {e(w["notatka_lokalizacji"])}</p>')
+    elif w["rodzaj"] == "punkt" and w["notatka_lokalizacji"]:
+        t.append(f'<p class="ob-przyblizony"><b>Miejsce na mapie.</b> {e(w["notatka_lokalizacji"])}</p>')
     if w["rodzaj"] == "nakladka":
         if w["nakladka"] == "region":
             opis_n = "Zjawisko obejmuje obszar większy od powiatu, dlatego na mapie jest nakładką na cały widok, bez granic."
@@ -452,7 +454,7 @@ def podstrona_wydarzenia(w, wg_sluga, wymiary, obszary_ind, wygenerowano):
             opis_n = "Źródła nie pozwalają ustalić granic tego obszaru, dlatego na mapie jest nakładką na cały powiat."
         else:
             opis_n = "Źródło nie podaje dokładniejszego miejsca w powiecie, dlatego na mapie jest nakładką na cały powiat."
-        t.append(f'<p class="ob-przyblizony"><b>{"Zasięg nieokreślony" if w.get("nieokreslony") else "Obszar przybliżony"}.</b> {opis_n}</p>')
+        t.append(f'<p class="ob-przyblizony"><b>{"Zasięg nieokreślony" if w.get("nieokreslony") else "Obszar przybliżony"}.</b> {opis_n}{" " + e(w["notatka_lokalizacji"]) if w["notatka_lokalizacji"] else ""}</p>')
     t.append(mini_mapa(w, wymiary, obszary_ind))
 
     t.append("<h2>Źródła</h2><ul class=\"zrodla\">")

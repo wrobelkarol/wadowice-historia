@@ -2,7 +2,7 @@
 
 Statyczna strona z mapą udokumentowanych wydarzeń historycznych na terenie dzisiejszego powiatu wadowickiego (woj. małopolskie). Wygląd jak czarno-biała mapa z atlasu: białe tło, gruba granica powiatu, drogi i nazwy z OpenStreetMap, czerwone kropki z napisami, kolorowe obszary epidemii. Każde wydarzenie ma własną podstronę ze źródłami.
 
-Dane powstają epokami. Dziś opracowana jest epoka 1648–1772.
+Dane powstają epokami. Dziś opracowane są epoki 0–966, 1564–1648, 1648–1772 i 1772–1815 (status każdej epoki czyta skrypt z `data/epoki.json` projektu badawczego).
 
 ## Uruchomienie lokalne
 

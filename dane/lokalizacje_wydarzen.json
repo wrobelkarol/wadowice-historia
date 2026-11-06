@@ -109,5 +109,53 @@
       "Klecza Górna"
     ],
     "notatka": "Klecza Średnia nie występuje w OSM jako osobna miejscowość. Kropka stoi w połowie drogi między Kleczą Dolną a Górną."
+  },
+  "1564-1648-A-005": {
+    "punkt_miedzy": [
+      "Klecza Dolna",
+      "Klecza Górna"
+    ],
+    "notatka": "Źródło pisze o Kleczy i nie rozróżnia Kleczy Dolnej i Górnej, które OSM zna jako osobne wsie. Kropka stoi w połowie drogi między nimi, więc położenie jest przybliżone."
+  },
+  "1564-1648-B-006": {
+    "punkt_miedzy": [
+      "Klecza Dolna",
+      "Klecza Górna"
+    ],
+    "notatka": "Rejestr dotyczy Kleczy (młyn stępny i tartak) oraz Wysokiej (tracz). Kropka stoi w połowie drogi między Kleczą Dolną a Górną, a Wysoka leży kilka kilometrów na wschód, poza kropką. Źródło nie rozróżnia Dolnej i Górnej, więc położenie jest przybliżone."
+  },
+  "1564-1648-B-004": {
+    "notatka": "Pinezka w Wadowicach oznacza wkład powiatu: miasto wystawiło pieszych. Sam popis odbył się w obozie pod Lwowem, poza zasięgiem mapy."
+  },
+  "1564-1648-C-005": {
+    "data_tekst": "1580, 1582, 1584, 1604, 1605",
+    "lata": [
+      1580,
+      1582,
+      1584,
+      1604,
+      1605
+    ],
+    "rzeka": "skawa",
+    "notatka": "Źródło wymienia tylko lata wylewów (lista nie musi być pełna), bez miejsc i strat, poza zniesioną w 1580 r. wsią Wiglowice w dolnym odcinku Skawy. Zaznaczono dzisiejszy bieg Skawy w zasięgu mapy, a nie zasięg zalania. To pojedyncze lata, nie ciągły okres."
+  },
+  "1564-1648-C-004": {
+    "rzeka": "skawa",
+    "notatka": "Źródło mówi o drodze wzdłuż Skawy z Zatora przez Wadowice do Suchej i o spławie drewna rzeką. Zaznaczono dzisiejszy bieg Skawy w zasięgu mapy jako schemat, nie dokładny przebieg drogi."
+  },
+  "1564-1648-C-003": {
+    "linia": [
+      "Brzeźnica",
+      "Kossowa",
+      "Spytkowice",
+      "Zator"
+    ],
+    "notatka": "Źródło wymienia też Skawinę, Nowy Dwór i Półwieś. Linia łączy prosto Brzeźnicę, Kossową, Spytkowice i Zator: to schemat, nie dokładny przebieg drogi. Kraków, Skawina i Oświęcim leżą poza zasięgiem mapy."
+  },
+  "1564-1648-C-002": {
+    "notatka": "Źródło mówi o zlewni Skawy, zwłaszcza o jej południowej części i wsiach starostwa zatorskiego na południe od Wadowic (m.in. Koziniec, Ponikiew, Rzyki), bez granic obszaru. Nakładka obejmuje cały powiat i jest tylko przybliżeniem."
+  },
+  "1564-1648-B-009": {
+    "notatka": "Spór dotyczył starostwa lanckorońskiego. Źródło nie wymienia żadnych wsi, więc granic starostwa nie zaznaczono; nakładka obejmuje cały powiat i jest tylko przybliżeniem."
   }
 }
