@@ -1,4 +1,3 @@
 {
-  "_opis": "Rekordy pokazywane jako hipotezy mimo statusu „niepotwierdzony” (decyzja autora projektu). Status w danych badawczych się nie zmienia. Hipoteza nie trafia na mapę ani do liczby wydarzeń: ma tylko własną podstronę i sekcję na liście. id → notatka widoczna na podstronie.",
-  "0000-0966-B-001": "To hipoteza tła, a nie udokumentowane zdarzenie. Weryfikator znalazł wszystkie cytaty w źródłach, ale status „niepotwierdzony” dotyczy samego zdarzenia: źródła nie wskazują datowalnego aktu w powiecie, a z okolicami Wadowic wiąże je wprost tylko jedno opracowanie."
+  "_opis": "Rekordy pokazywane jako hipotezy mimo statusu „niepotwierdzony” (decyzja autora projektu); status w danych badawczych się nie zmienia. Rekordy z polem hipoteza: true trafiają do tej samej sekcji same, bez wpisu tutaj. Hipoteza nie trafia na mapę ani do liczby wydarzeń. id → notatka widoczna na podstronie."
 }

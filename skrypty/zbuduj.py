@@ -564,7 +564,7 @@ def strona_listy(wyd, wygenerowano):
          f'<section class="sekcja-wykaz"><h2>Na mapie, chronologicznie</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in na)}</ul></section>',
          f'<section class="sekcja-wykaz" id="poza-mapa"><h2>Tylko na liście: regionalne, obszarowe, poza zasięgiem mapy, bez daty</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in poza)}</ul></section>']
     if hip:
-        t.append(f'<section class="sekcja-wykaz" id="hipotezy"><h2>Hipotezy: tło, nie potwierdzone wydarzenia</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in hip)}</ul></section>')
+        t.append(f'<section class="sekcja-wykaz" id="hipotezy"><h2>Hipotezy, nie potwierdzone wydarzenia</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in hip)}</ul></section>')
     return strona("Wszystkie wydarzenia: powiat wadowicki", "\n".join(t), 1, wygenerowano,
                   opis="Chronologiczna lista wydarzeń historycznych na terenie powiatu wadowickiego.",
                   skrypty='<script src="../assets/lista.js"></script>')
@@ -598,19 +598,21 @@ def strona_o_projekcie(wszystkie, epoki, wygenerowano, projekt):
     repo = projekt.get("repozytorium")
     hipotezy_txt = ""
     if hip:
-        linki = ", ".join(f'<a data-z-stanem href="../{w["url"]}">{e(w["tytul"])}</a>' for w in hip)
-        hipotezy_txt = f"<p>Osobno pokazujemy hipotezy tła: {linki}. Nie są to potwierdzone wydarzenia, nie ma ich na mapie i nie wchodzą do powyższych liczb.</p>\n"
+        hipotezy_txt = (f'<p>Osobno pokazujemy hipotezy ({len(hip)}): zjawiska, które źródła przedstawiają jako hipotezę lub przedmiot sporu badaczy. '
+                        'Nie są to potwierdzone wydarzenia, nie ma ich na mapie i nie wchodzą do powyższych liczb. '
+                        '<a data-z-stanem href="../wydarzenia/#hipotezy">Lista hipotez</a>.</p>\n')
     puste_epoki = "".join(
-        f'<p>Epoka {x["od"]}–{x["do"]} jest opracowana, ale w sprawdzonych źródłach nie ma w niej żadnego potwierdzonego wydarzenia z tego obszaru. '
-        "To brak dowodu, a nie dowód, że nic się wtedy nie działo.</p>\n"
-        for x in epoki if x["gotowa"] and not x["ile"])
+        f'<p>Epoka {x["od"]}–{x["do"]} jest opracowana, ale w sprawdzonych źródłach nie ma w niej zdarzeń, które można wskazać na mapie'
+        + (": są tylko zjawiska obszarowe i hipotezy, opisane na liście" if x["ile"] or x["hipotezy"] else "")
+        + ". To brak dowodu, a nie dowód, że nic się wtedy nie działo.</p>\n"
+        for x in epoki if x["gotowa"] and not x["na_mapie"])
 
     t = f"""<h1>O projekcie</h1>
 <p class="opis">Mapa pokazuje udokumentowane wydarzenia z lat 0–1945 na terenie dzisiejszego powiatu wadowickiego: bitwy, najazdy, przemarsze i kwaterunki wojsk, pożary, epidemie i inne. Dane powstają epokami.</p>
 <p>Opracowane epoki: <b>{e(', '.join(gotowe))}</b>. W przygotowaniu: {e(', '.join(wkrotce))}.</p>
 {puste_epoki}
 <h2>Skąd są dane</h2>
-<p>Agenci AI szukali wydarzeń w źródłach: Wikipedii, Słowniku geograficznym Królestwa Polskiego, artykułach naukowych i na stronach lokalnych. Osobny agent sprawdził każdy rekord w źródle: w epokach 1648–1772 i 1772–1815 znaleziono w tekstach źródeł wszystkie cytaty (131 i 57). Dane są wiarygodne, ale niekompletne. Opisy są własnymi parafrazami, a krótkie cytaty przy źródłach podano w języku oryginału.</p>
+<p>Agenci AI szukali wydarzeń w źródłach: Wikipedii, Słowniku geograficznym Królestwa Polskiego, artykułach naukowych i na stronach lokalnych. Osobny agent sprawdził każdy rekord w źródle: w epokach 0–966, 1648–1772 i 1772–1815 znaleziono w tekstach źródeł wszystkie cytaty (56, 131 i 57). Dane są wiarygodne, ale niekompletne. Opisy są własnymi parafrazami, a krótkie cytaty przy źródłach podano w języku oryginału.</p>
 <p>Rekordy na stronie po scaleniu duplikatów: {len(wyd)} (pewność A: {ile['A']}, B: {ile['B']}, C: {ile['C']}, D: {ile['D']}). Rekordy niepotwierdzone i sprzeczne nie są pokazywane jako wydarzenia.</p>
 {hipotezy_txt}
 <h2>Jak liczona jest pewność</h2>
@@ -687,6 +689,7 @@ def main():
             print(f"  UWAGA: epoka {klucz}: data/epoki.json podaje „opracowana”, a pliku zweryfikowanego nie ma")
         x["ile"] = sum(1 for w in wyd if w["epoka"] == klucz and not w.get("hipoteza"))
         x["hipotezy"] = sum(1 for w in wyd if w["epoka"] == klucz and w.get("hipoteza"))
+        x["na_mapie"] = sum(1 for w in wyd if w["epoka"] == klucz and w["na_mapie"])
 
     wygenerowano = datetime.date.today().isoformat()
     obj = {"wygenerowano": wygenerowano, "atrybucja_mapy": "© OpenStreetMap contributors (ODbL)",

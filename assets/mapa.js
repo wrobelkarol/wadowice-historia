@@ -451,26 +451,26 @@
     var pusto = document.getElementById('pusto');
     if (!evs.length) {
       var pokrywa = D.epoki.filter(function (e) { return e.gotowa && e.od < stan.do && e.do > stan.od; });
-      var bezWydarzen = pokrywa.filter(function (e) { return !e.ile; });
+      var bezPunktow = pokrywa.filter(function (e) { return !e.na_mapie; });
       if (!pokrywa.length) pusto.textContent = 'Epoki z tego zakresu są w przygotowaniu.';
-      else if (bezWydarzen.length === pokrywa.length) {
-        pusto.textContent = 'Epoka ' + bezWydarzen.map(function (e) { return e.od + '–' + e.do; }).join(', ') + ' jest opracowana, ale w sprawdzonych źródłach nie ma w niej potwierdzonych wydarzeń. To brak dowodu, a nie dowód, że nic się nie działo.';
-      }
+      else if (bezPunktow.length === pokrywa.length) pusto.textContent = 'Epoka ' + bezPunktow.map(function (e) { return e.od + '–' + e.do; }).join(', ') + ' jest opracowana, ale w sprawdzonych źródłach nie ma w niej zdarzeń, które można wskazać na mapie. To brak dowodu, a nie dowód, że nic się nie działo.';
       else pusto.textContent = 'W tym zakresie lat nie ma wydarzeń przy obecnych ustawieniach.';
-      if (D.epoki.some(function (e) { return e.hipotezy && e.od < stan.do && e.do > stan.od; })) {
-        var linkH = document.createElement('a');
-        linkH.href = 'wydarzenia/#hipotezy';
-        linkH.textContent = 'Zobacz hipotezy tła.';
+      var wZakr = D.epoki.filter(function (e) { return e.od < stan.do && e.do > stan.od; });
+      function dodajLink(adres, tekst) {
+        var a = document.createElement('a');
+        a.href = adres; a.textContent = tekst;
         pusto.appendChild(document.createTextNode(' '));
-        pusto.appendChild(linkH);
+        pusto.appendChild(a);
       }
+      if (wZakr.some(function (e) { return e.ile > e.na_mapie; })) dodajLink('wydarzenia/#poza-mapa', 'Zjawiska obszarowe.');
+      if (wZakr.some(function (e) { return e.hipotezy; })) dodajLink('wydarzenia/#hipotezy', 'Hipotezy.');
       pusto.hidden = false;
     } else { pusto.hidden = true; }
     var poza = D.events.filter(function (e) { return pewnoscOk(e) && !e.na_mapie && !e.hipoteza; }).length;
     document.getElementById('link-poza-mapa').textContent = 'Regionalne, obszarowe i bez daty, tylko na liście: ' + poza;
     var hipotezy = D.events.filter(function (e) { return e.hipoteza; }).length;
     var lh2 = document.getElementById('link-hipotezy');
-    lh2.textContent = 'Hipotezy tła, tylko na liście: ' + hipotezy;
+    lh2.textContent = 'Hipotezy, tylko na liście: ' + hipotezy;
     lh2.parentNode.hidden = !hipotezy;
   }
 
@@ -523,7 +523,7 @@
   function budujSkale() {
     var suma = 0;
     // Szerszy odcinek dostają tylko epoki, w których są wydarzenia do wskazania na suwaku.
-    D.epoki.forEach(function (e) { e.waga = e.gotowa && e.ile ? 3 : 1; suma += e.waga; });
+    D.epoki.forEach(function (e) { e.waga = e.gotowa && e.na_mapie ? 3 : 1; suma += e.waga; });
     var p = 0;
     odcinki = D.epoki.map(function (e) { var o = { od: e.od, do: e.do, p0: p, p1: p + e.waga / suma, e: e }; p = o.p1; return o; });
   }
@@ -561,7 +561,7 @@
       .attr('type', 'button').attr('tabindex', -1)
       .attr('class', function (o) { return 'epoka ' + (o.e.gotowa ? 'epoka-gotowa' : 'epoka-wkrotce'); })
       .style('left', function (o) { return o.p0 * 100 + '%'; }).style('width', function (o) { return (o.p1 - o.p0) * 100 + '%'; })
-      .attr('title', function (o) { return o.od + '–' + o.do + ': ' + (!o.e.gotowa ? 'w przygotowaniu' : o.e.ile ? 'opracowane' : 'opracowane, brak potwierdzonych wydarzeń'); })
+      .attr('title', function (o) { return o.od + '–' + o.do + ': ' + (!o.e.gotowa ? 'w przygotowaniu' : o.e.na_mapie ? 'opracowane' : 'opracowane, bez zdarzeń na mapie'); })
       .attr('aria-label', function (o) { return 'Pokaż lata ' + o.od + '–' + o.do; })
       .on('click', function (ev, o) { ustawLata(o.od, o.do); });
     var lata = {};
