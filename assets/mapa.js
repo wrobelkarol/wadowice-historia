@@ -12,7 +12,7 @@
   var gMiejsca = d3.select('#e-miejsca'), gLinie = d3.select('#e-linie'), gEtykiety = d3.select('#e-etykiety'), gKropki = d3.select('#e-kropki');
   var dymek = document.getElementById('dymek'), listaGrupy = document.getElementById('lista-grupy');
   var dotyk = window.matchMedia('(pointer: coarse)').matches;
-  var stan = { od: 0, do: 1945, c: false, d: false };
+  var stan = { od: 0, do: 1945, c: false, d: false, obszary: true };
   var D = {}, tr = d3.zoomIdentity, W = 0, H = 0, zakresSwiata = null, widokStartowy = null, doWidoku = null;
   var zoom = d3.zoom();
 
@@ -73,7 +73,9 @@
     var pelny = stan.od <= D.epoki[0].od && stan.do >= D.epoki[D.epoki.length - 1].do;
     return pelny || (e.rok_od <= stan.do && e.rok_do >= stan.od);
   }
-  function naMapie(e) { return e.na_mapie && pewnoscOk(e) && wZakresie(e); }
+  // „Zjawisko obszarowe” dla przełącznika: wszystko, co nie jest zwykłą kropką, także strzałki zjawisk spoza mapy.
+  function czyObszarowe(e) { return e.rodzaj !== 'punkt' || e.obszarowe; }
+  function naMapie(e) { return e.na_mapie && pewnoscOk(e) && wZakresie(e) && (stan.obszary || !czyObszarowe(e)); }
   var RANGA = { A: 0, B: 1, C: 2, D: 3 };
   // Etykiety: wyższa pewność, potem nowsze. Obszar dostaje podpis przed kropkami tej samej pewności, bo sam nie ma znacznika.
   function ranga(e) { return RANGA[e.pewnosc] - (e.rodzaj !== 'punkt' ? 0.5 : 0); }
@@ -144,6 +146,7 @@
     if (stan.c) cz.push('c=1');
     if (stan.d) cz.push('d=1');
     if (stan.kontekst) cz.push('k=1');
+    if (!stan.obszary) cz.push('o=0');
     return cz.join('&');
   }
   var zapisCzasomierz = 0;
@@ -154,7 +157,7 @@
     location.hash.slice(1).split('&').forEach(function (p) { var i = p.indexOf('='); if (i > 0) h[p.slice(0, i)] = p.slice(i + 1); });
     if (h.lata && /^\d+-\d+$/.test(h.lata)) { var l = h.lata.split('-').map(Number); stan.od = Math.max(0, l[0]); stan.do = Math.min(1945, l[1]); }
     else if (K.domyslneLata) { stan.od = K.domyslneLata[0]; stan.do = K.domyslneLata[1]; }
-    stan.c = h.c === '1'; stan.d = h.d === '1'; stan.kontekst = h.k === '1';
+    stan.c = h.c === '1'; stan.d = h.d === '1'; stan.kontekst = h.k === '1'; stan.obszary = h.o !== '0';
     if (h.w) { var v = h.w.split(',').map(Number); if (v.length === 3 && v.every(isFinite) && v[2] > 0) doWidoku = v; }
   }
 
@@ -783,6 +786,7 @@
       a.setAttribute('href', h + '#' + kodStanu());
     }
     document.getElementById('pokaz-c').addEventListener('change', function (ev) { stan.c = ev.target.checked; zaplanujUklad(); zapiszPozniej(); });
+    document.getElementById('pokaz-obszary').addEventListener('change', function (ev) { stan.obszary = ev.target.checked; zaplanujUklad(); zapiszPozniej(); });
     document.getElementById('pokaz-d').addEventListener('change', function (ev) { stan.d = ev.target.checked; zaplanujUklad(); zapiszPozniej(); });
     document.querySelector('.kontekst-btn').addEventListener('click', function () { ustawKontekst(!stan.kontekst, true); });
     document.querySelector('.panel-region button').addEventListener('click', function () { ustawPanel(!document.querySelector('.panel-region').classList.contains('otwarta')); });
@@ -845,7 +849,7 @@
       document.getElementById('klucz-d').hidden = false; document.getElementById('etykieta-d').hidden = false;
     }
     czytajStan();
-    document.getElementById('pokaz-c').checked = stan.c; document.getElementById('pokaz-d').checked = stan.d;
+    document.getElementById('pokaz-c').checked = stan.c; document.getElementById('pokaz-d').checked = stan.d; document.getElementById('pokaz-obszary').checked = stan.obszary;
     rysujPodklad();
     ustawWymiary(false);
     podepnij();

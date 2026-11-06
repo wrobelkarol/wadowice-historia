@@ -140,6 +140,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-vis
 .li-gmina { stroke: var(--ciemny); stroke-width: 1; }
 .przelacznik { display: flex; gap: 7px; align-items: flex-start; padding-top: 8px; border-top: 1px solid var(--linia); cursor: pointer; line-height: 1.35; }
 .przelacznik[hidden] { display: none; }
+.przelacznik + .przelacznik { margin-top: 8px; }
 .przelacznik input { margin: 2px 0 0; accent-color: var(--czern); width: 15px; height: 15px; flex: none; }
 .poza-mapa { margin: 8px 0 0; }
 .poza-mapa[hidden] { display: none; }
