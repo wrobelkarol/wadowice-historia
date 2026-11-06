@@ -21,6 +21,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-vis
 .strona-mapy { position: fixed; inset: 0; overflow: hidden; }
 #mapa { position: absolute; inset: 0; outline: none; }
 #mapa:focus-visible { outline: 2.5px solid var(--czern); outline-offset: -4px; }
+/* Warstwa świata skaluje się z mapą, więc ramka fokusu rosłaby razem z nią do setek pikseli.
+   Fokus w tej warstwie pokazuje sam kolor linii lub obrysu (.linia:focus-visible, .obszar:focus-visible). */
+#swiat :focus, #swiat :focus-visible { outline: none !important; }
 #plotno { display: block; background: #fff; cursor: grab; touch-action: none; }
 #plotno:active { cursor: grabbing; }
 #w-powiat { fill: none; stroke: var(--czern); stroke-width: 3; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
@@ -48,6 +51,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-vis
 .linia-trasa .linia-kreska { stroke: var(--czerwony); stroke-width: 2; stroke-dasharray: 7 5; }
 .linia-rzeka .linia-kreska { stroke: var(--rzeka); stroke-width: 3.5; stroke-opacity: 0.75; }
 .linia:hover .linia-kreska, .linia:focus-visible .linia-kreska { stroke: var(--czern); stroke-opacity: 1; }
+.linia:focus-visible .linia-kreska { stroke-width: 3.5; }
 .li-trasa { stroke: var(--czerwony); stroke-width: 2; stroke-dasharray: 5 3; }
 .li-rzeka { stroke: var(--rzeka); stroke-width: 3.5; stroke-opacity: 0.75; }
 
