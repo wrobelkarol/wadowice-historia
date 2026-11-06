@@ -9,6 +9,7 @@
   --epidemia: #f5c800;
   --epizootia: #e8791e;
   --glod: #8a5a2b;
+  --rzeka: #2f6f9f;
   --kroj: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
 }
 * { box-sizing: border-box; }
@@ -39,6 +40,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-vis
 .obszar-epizootia { fill: var(--epizootia); fill-opacity: 0.38; stroke: #a8540f; }
 .obszar-glod { fill: var(--glod); fill-opacity: 0.38; stroke: #5f3c1b; }
 .obszar-c { stroke-dasharray: 4 3; fill-opacity: 0.24; }
+
+.linia { cursor: pointer; outline: none; }
+.linia path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.linia-traf { stroke: transparent; stroke-width: 15; pointer-events: stroke; }
+.linia-kreska { pointer-events: none; }
+.linia-trasa .linia-kreska { stroke: var(--czerwony); stroke-width: 2; stroke-dasharray: 7 5; }
+.linia-rzeka .linia-kreska { stroke: var(--rzeka); stroke-width: 3.5; stroke-opacity: 0.75; }
+.linia:hover .linia-kreska, .linia:focus-visible .linia-kreska { stroke: var(--czern); stroke-opacity: 1; }
+.li-trasa { stroke: var(--czerwony); stroke-width: 2; stroke-dasharray: 5 3; }
+.li-rzeka { stroke: var(--rzeka); stroke-width: 3.5; stroke-opacity: 0.75; }
 
 .pkt-pelna { fill: var(--czerwony); stroke: #fff; stroke-width: 1; }
 .pkt-obrys { fill: #fff; stroke: var(--czerwony); stroke-width: 1.8; }

@@ -136,6 +136,15 @@ def main():
     zapisz("drogi_drobne", [{"type": "Feature", "geometry": {"type": "MultiLineString", "coordinates": drobne[k]},
                              "properties": {"klasa": k}} for k in drobne])
 
+    # Skawa: rysowana tylko razem z wydarzeniem, które jej dotyczy; nie jest warstwą podkładu.
+    skawa = zbierz_drogi(wczytaj("skawa"), lambda w: 0, TOL_DROGA)
+    zapisz("skawa", [{"type": "Feature", "geometry": {"type": "MultiLineString", "coordinates": skawa[0]},
+                      "properties": {"nazwa": "Skawa"}}])
+    # Miasta poza zasięgiem mapy, między którymi źródła prowadzą trasy.
+    zapisz("punkty_tras", [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [round(n["lon"], 5), round(n["lat"], 5)]},
+                            "properties": {"nazwa": n["tags"]["name"], "typ": n["tags"]["place"], "gmina": None, "w_powiecie": False, "osm_wezel": n["id"]}}
+                           for n in wczytaj("punkty_tras") if n["tags"].get("place") in ("city", "town")])
+
     # Miejscowości.
     ob_gmin = [(c["properties"]["nazwa"], geo.Obszar(geo.pierscienie_geom(c["geometry"]))) for c in cechy_gmin]
     miejsca = []

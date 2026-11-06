@@ -37,6 +37,12 @@ out tags geom;""",
     "drogi_drobne": f"""[out:json][timeout:180];
 way["highway"="unclassified"]({BBOX});
 out tags geom;""",
+    "punkty_tras": """[out:json][timeout:60];
+node["place"]["name"~"^(Bielsko-Biała|Myślenice)$"](49.6,18.9,50.0,20.05);
+out body;""",
+    "skawa": f"""[out:json][timeout:60];
+way["waterway"="river"]["name"="Skawa"]({BBOX});
+out tags geom;""",
     "granice_miejscowosci": f"""[out:json][timeout:180];
 (
   rel["boundary"="administrative"]["admin_level"~"^(8|9|10)$"]({BBOX});

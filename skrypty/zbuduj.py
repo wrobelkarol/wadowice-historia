@@ -155,7 +155,7 @@ def geojson(nazwa):
 class Miejsca:
     def __init__(self):
         self.punkty = {}
-        for f in geojson("miejscowosci") + geojson("przysiolki"):
+        for f in geojson("miejscowosci") + geojson("przysiolki") + geojson("punkty_tras"):
             self.punkty.setdefault(f["properties"]["nazwa"], []).append(f)
         self.granice = {}
         plik = GEO / "miejscowosci_granice.geojson"
@@ -184,6 +184,19 @@ class Miejsca:
                 if a < pole:
                     najl, pole = f, a
         return najl
+
+
+def probki_w_zasiegu(linie, zasieg):
+    """Punkty co około 300 m wzdłuż linii, tylko w zasięgu mapy: z nich wybieramy miejsce podpisu."""
+    wynik = []
+    for l in linie:
+        for a, b in zip(l, l[1:]):
+            n = max(1, int(geo.odleglosc_km(a, b) / 0.3))
+            for i in range(n):
+                p = [round(a[0] + (b[0] - a[0]) * i / n, 5), round(a[1] + (b[1] - a[1]) * i / n, 5)]
+                if zasieg.zawiera(p):
+                    wynik.append(p)
+    return wynik
 
 
 def buduj_rekordy(pliki, ustawienia):
@@ -245,7 +258,23 @@ def buduj_rekordy(pliki, ustawienia):
             obszarowe = r.get("charakter") == "obszar"
             w["notatka_lokalizacji"] = usta.get("notatka", "")
 
-            if r["typ"] in TYPY_OBSZAROWE:
+            if usta.get("lata"):
+                w["lata"] = usta["lata"]
+            if usta.get("linia") or usta.get("rzeka"):
+                w["przyblizony"] = True
+                if usta.get("rzeka"):
+                    linie = geojson(usta["rzeka"])[0]["geometry"]["coordinates"]
+                else:
+                    pkt = [miejsca.punkt(nz) for nz in usta["linia"]]
+                    if not all(pkt):
+                        ostrzezenia.append(f"{r['id']}: brak punktu trasy w OSM: {usta['linia']}")
+                    linie = [[f["geometry"]["coordinates"] for f in pkt if f]]
+                wnetrze = probki_w_zasiegu(linie, zasieg)
+                oid = f"L{len(obszary) + 1}"
+                obszary.append({"type": "Feature", "geometry": {"type": "MultiLineString", "coordinates": linie}, "properties": {
+                    "id": oid, "etykieta": wnetrze[len(wnetrze) // 2]}})
+                w.update(rodzaj="linia", obszar=oid, linia_typ="rzeka" if usta.get("rzeka") else "trasa", etykieta_xy=obszary[-1]["properties"]["etykieta"])
+            elif r["typ"] in TYPY_OBSZAROWE:
                 nazwy = usta.get("miejscowosci") or ([r["miejscowosc"]] if r["miejscowosc"] else [])
                 w["przyblizony"] = bool(usta.get("przyblizony"))
                 pierscienie, opisane, brak = [], [], []
@@ -372,7 +401,7 @@ def podstrona_wydarzenia(w, wg_sluga, wymiary, obszary_ind, wygenerowano):
         t.append(f'<p class="plakietka plakietka-legenda"><span><b class="znak-hipotezy">Hipoteza.</b> {e(w["notatka_hipotezy"])}</span></p>')
     if w["data_uwagi"]:
         t.append(f'<p class="uwagi">{e(w["data_uwagi"])}</p>')
-    miejsce = w["miejscowosc"] or ("zjawisko obszarowe, bez jednej miejscowości" if w["powod_listy"] == "zjawisko obszarowe" else "region, bez jednej miejscowości")
+    miejsce = w["miejscowosc"] or ("zjawisko obszarowe, bez jednej miejscowości" if w["powod_listy"] == "zjawisko obszarowe" or w["rodzaj"] == "linia" else "region, bez jednej miejscowości")
     if w["szara"]:
         miejsce += " (poza powiatem)"
     meta = [("Miejsce", miejsce)]
@@ -390,6 +419,8 @@ def podstrona_wydarzenia(w, wg_sluga, wymiary, obszary_ind, wygenerowano):
     t.append(f'<p class="opis">{e(w["opis"])}</p>')
     if w["rodzaj"] == "obszar" and w["przyblizony"]:
         t.append(f'<p class="ob-przyblizony"><b>Obszar przybliżony.</b> {e(w["notatka_lokalizacji"])}</p>')
+    if w["rodzaj"] == "linia":
+        t.append(f'<p class="ob-przyblizony"><b>Przebieg przybliżony.</b> {e(w["notatka_lokalizacji"])}</p>')
     t.append(mini_mapa(w, wymiary, obszary_ind))
 
     t.append("<h2>Źródła</h2><ul class=\"zrodla\">")
@@ -452,6 +483,16 @@ def mini_mapa(w, wym, obszary_ind):
         x, y = geo.rzut(f["properties"]["etykieta"])
         warstwy.append(f'<text x="{x:.2f}" y="{y:.2f}" text-anchor="middle" class="mini-etykieta">{e(w["miejsce_obszaru"] if "," not in w["miejsce_obszaru"] else "")}</text>')
         podpis = "Obszar to dzisiejsze granice miejscowości z OSM." if not w["przyblizony"] else "Obszar przybliżony, zbudowany z dzisiejszych granic miejscowości z OSM."
+    elif w["rodzaj"] == "linia":
+        d = ""
+        for l in obszary_ind[w["obszar"]]["geometry"]["coordinates"]:
+            d += "M" + "L".join(f"{geo.rzut(p)[0]:.2f} {geo.rzut(p)[1]:.2f}" for p in l)
+        if w["linia_typ"] == "rzeka":
+            warstwy.append(f'<path d="{d}" fill="none" stroke="#2f6f9f" stroke-width="0.32" stroke-linejoin="round"/>')
+            podpis = "Dzisiejszy bieg rzeki w zasięgu mapy, a nie zasięg zalania."
+        else:
+            warstwy.append(f'<path d="{d}" fill="none" stroke="#d10a11" stroke-width="0.26" stroke-dasharray="0.8 0.5"/>')
+            podpis = "Linia jest schematem, nie dokładnym przebiegiem."
     elif w.get("hipoteza"):
         podpis = "Hipoteza nie wskazuje jednego miejsca, dlatego nie ma jej na mapie."
     elif w["powod_listy"] == "zjawisko obszarowe":
@@ -589,7 +630,8 @@ def strona_o_projekcie(wszystkie, epoki, wygenerowano, projekt):
 <li>Mapa pokazuje dzisiejsze granice powiatu i gmin, choć wydarzenia działy się w innych ustrojach i podziałach administracyjnych.</li>
 <li>Kropka stoi w środku miejscowości według OSM, a nie w dokładnym miejscu zdarzenia. Kropki jednej miejscowości są rozsunięte tylko po to, by dało się je kliknąć.</li>
 <li>Obszar epidemii, zarazy bydła lub głodu to dzisiejsza granica wskazanej miejscowości. Gdy źródło jest mniej dokładne albo granicy brak, podstrona wydarzenia ma oznaczenie „obszar przybliżony”.</li>
-<li>Zjawiska obszarowe, których zasięg źródła opisują tylko słownie (np. „cyrkuł myślenicki”, „dolina Skawy”), nie są rysowane: dawnych granic nie ma w danych, a rysowanie byłoby zgadywaniem.</li>
+<li>Zjawiska obszarowe, których zasięg źródła opisują tylko słownie (np. „cyrkuł myślenicki”), nie są rysowane: dawnych granic nie ma w danych, a rysowanie byłoby zgadywaniem.</li>
+<li>Trasy na mapie to schematyczne linie między miejscami wskazanymi w źródłach, a nie dokładny przebieg dróg. Linia rzeki to jej dzisiejszy bieg, a nie zasięg zalania.</li>
 <li>Wydarzenia regionalne, obszarowe i rekordy bez roku są tylko na <a data-z-stanem href="../wydarzenia/#poza-mapa">liście</a>. Gdy źródła podają różne daty, opis różnic jest na podstronie wydarzenia.</li>
 <li>Część źródeł papierowych i rękopiśmiennych nie została sprawdzona bezpośrednio, tylko przez opracowania, które je cytują.</li>
 </ul>
