@@ -1,0 +1,56 @@
+{
+ "Ołomuniec": {
+  "lon": 17.2511,
+  "lat": 49.5941,
+  "osm": "relation/437057",
+  "opis": "Olomouc, okres Olomouc, Olomoucký kraj, Česko"
+ },
+ "Brama Morawska": {
+  "lon": 17.8256,
+  "lat": 49.6083,
+  "osm": "way/1163706371",
+  "opis": "Moravská brána, okres Přerov, Olomoucký kraj, Česko"
+ },
+ "Gliwice": {
+  "lon": 18.6657,
+  "lat": 50.2941,
+  "osm": "relation/2103532",
+  "opis": "Gliwice, Górnośląsko-Zagłębiowska Metropolia, województwo śl"
+ },
+ "Cieszyn": {
+  "lon": 18.6562,
+  "lat": 49.7558,
+  "osm": "relation/2816525",
+  "opis": "Cieszyn, powiat cieszyński, województwo śląskie, 43-400, Pol"
+ },
+ "Maków Podhalański": {
+  "lon": 19.6769,
+  "lat": 49.7299,
+  "osm": "relation/2814967",
+  "opis": "Maków Podhalański, gmina Maków Podhalański, powiat suski, wo"
+ },
+ "Podgórze": {
+  "lon": 19.953,
+  "lat": 50.0431,
+  "osm": "relation/2398485",
+  "opis": "Podgórze, Kraków, województwo małopolskie, Polska"
+ },
+ "Oświęcim": {
+  "lon": 19.2601,
+  "lat": 50.0337,
+  "osm": "relation/2893525",
+  "opis": "Oświęcim, powiat oświęcimski, województwo małopolskie, Polsk"
+ },
+ "Kraków": {
+  "lon": 19.9972,
+  "lat": 50.0469,
+  "osm": "relation/2768921",
+  "opis": "Kraków, województwo małopolskie, Polska"
+ },
+ "Praga": {
+  "lon": 14.4213,
+  "lat": 50.0875,
+  "osm": "relation/435514",
+  "opis": "Praha, Česko"
+ }
+}

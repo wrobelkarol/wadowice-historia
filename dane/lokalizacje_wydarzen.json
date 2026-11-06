@@ -1,37 +1,113 @@
 {
-  "_opis": "Ręczne wskazanie obszaru, gdy nie wynika wprost z pól rekordu. id → miejscowości (nazwy z OSM), notatka widoczna na podstronie, przyblizony: oznaczenie „obszar przybliżony”, linia: schematyczna trasa przez miejscowości, rzeka: plik z dane/geo, lata: osobne lata dla suwaka, data_tekst: data do pokazania, gdy lata nie tworzą ciągłego okresu. Bez wpisu i bez miejscowości rekord zostaje tylko na liście.",
+  "_opis": "Ręczne wskazanie obszaru, gdy nie wynika wprost z pól rekordu. id → miejscowości (nazwy z OSM), notatka widoczna na podstronie, przyblizony: oznaczenie „obszar przybliżony”, linia: schematyczna trasa przez miejscowości, rzeka: plik z dane/geo, kontekst: miejsce z dane/kontekst_miejsca.json dla zjawisk poza zasięgiem mapy, punkt_miedzy: położenie w połowie drogi między miejscowościami, lata: osobne lata dla suwaka, data_tekst: data do pokazania, gdy lata nie tworzą ciągłego okresu. Bez wpisu i bez miejscowości rekord zostaje tylko na liście.",
   "0000-0966-C-011": {
-    "miejscowosci": ["Sosnowice", "Stronie", "Spytkowice"],
+    "miejscowosci": [
+      "Sosnowice",
+      "Stronie",
+      "Spytkowice"
+    ],
     "notatka": "Źródło mówi o górnej Skawie i jej dopływach, a jako przesłanki podaje stanowiska z trzech miejsc. Zaznaczono dzisiejsze granice tych wsi, a nie całą dolinę, której zasięgu źródło nie określa. To miejsca znalezisk, nie granice dawnego osadnictwa.",
     "przyblizony": true
   },
   "1772-1815-C-008": {
     "data_tekst": "1802, 1805, 1812, 1814",
-    "lata": [1802, 1805, 1812, 1814],
+    "lata": [
+      1802,
+      1805,
+      1812,
+      1814
+    ],
     "rzeka": "skawa",
     "notatka": "Źródło wymienia tylko lata wylewów, bez miejsc i strat. Zaznaczono dzisiejszy bieg Skawy w zasięgu mapy, a nie zasięg zalania."
   },
   "1772-1815-B-001": {
-    "linia": ["Kalwaria Zebrzydowska", "Wadowice", "Kęty"],
+    "linia": [
+      "Kalwaria Zebrzydowska",
+      "Wadowice",
+      "Kęty"
+    ],
     "notatka": "Linia łączy stacje postojowe z raportów austriackich: Kalwarię, Wadowice i Kęty. To schemat, nie dokładna trasa marszu."
   },
   "1772-1815-C-005": {
-    "linia": ["Bielsko-Biała", "Wadowice", "Myślenice"],
+    "linia": [
+      "Bielsko-Biała",
+      "Wadowice",
+      "Myślenice"
+    ],
     "notatka": "Źródła podają odcinek z Białej przez Wadowice do Myślenic. Linia łączy te miasta prosto: to schemat, nie dokładny przebieg drogi. Biała to dziś część Bielska-Białej; jej punkt i Myślenice leżą poza zasięgiem mapy."
   },
   "1648-1772-A-008": {
-    "miejscowosci": ["Lanckorona", "Barwałd Dolny", "Barwałd Średni", "Barwałd Górny", "Klecza Dolna", "Klecza Górna", "Kęty"],
+    "miejscowosci": [
+      "Lanckorona",
+      "Barwałd Dolny",
+      "Barwałd Średni",
+      "Barwałd Górny",
+      "Klecza Dolna",
+      "Klecza Górna",
+      "Kęty"
+    ],
     "notatka": "Notatka proboszcza wymienia Kraków, Kęty, Kleczę, Barwałd i Lanckoronę. Barwałd i Klecza to dziś po kilka wsi, źródło ich nie rozróżnia, więc zaznaczono wszystkie. Kraków leży poza zasięgiem mapy.",
     "przyblizony": true
   },
   "1648-1772-A-012": {
-    "miejscowosci": ["Wadowice"],
+    "miejscowosci": [
+      "Wadowice"
+    ],
     "notatka": "Źródło mówi o bydle „okolicznym” i nie podaje zasięgu. Zaznaczono tylko Wadowice, których dotyczą zarządzenia.",
     "przyblizony": true
   },
   "1648-1772-B-013": {
-    "miejscowosci": ["Kęty"],
+    "miejscowosci": [
+      "Kęty"
+    ],
     "notatka": "Źródło mówi o Kętach i okolicy, zasięgu „okolicy” nie określa. Zaznaczono tylko Kęty.",
     "przyblizony": true
+  },
+  "0000-0966-C-002": {
+    "rzeka": "skawa",
+    "notatka": "Źródło mówi o dolinie Skawy jako szlaku. Zaznaczono dzisiejszy bieg rzeki w zasięgu mapy."
+  },
+  "0000-0966-C-005": {
+    "kontekst": "Brama Morawska",
+    "notatka": "Kropka stoi w Bramie Morawskiej, nazwanej w źródle. To nie jest przebieg szlaku."
+  },
+  "0000-0966-C-006": {
+    "kontekst": "Ołomuniec",
+    "notatka": "Źródło wymienia rzymskie obozy marszowe w okolicach Ołomuńca. Kropka stoi w Ołomuńcu, a kampanie objęły szerszy obszar."
+  },
+  "0000-0966-C-009": {
+    "kontekst": "Gliwice",
+    "notatka": "Źródło mówi o Górnym Śląsku i zachodnich krańcach Małopolski, bez miejsca. Kropka w Gliwicach jedynie wskazuje Górny Śląsk."
+  },
+  "0000-0966-C-014": {
+    "kontekst": "Cieszyn",
+    "notatka": "Źródło wymienia Górny Śląsk i ziemię cieszyńską. Kropka w Cieszynie jedynie wskazuje ten obszar."
+  },
+  "0000-0966-C-018": {
+    "kontekst": "Ołomuniec",
+    "notatka": "Szlak prowadził z Pragi przez Ołomuniec do Krakowa i Kijowa, a odcinek od Ołomuńca do Krakowa jest w źródłach nieustalony. Kropka stoi w Ołomuńcu."
+  },
+  "1772-1815-C-006": {
+    "kontekst": "Maków Podhalański",
+    "notatka": "Źródło obejmuje osiem miejscowości Ziemi Babiogórskiej. Kropka w Makowie, jednej z nich, wskazuje ten obszar."
+  },
+  "1772-1815-C-009": {
+    "kontekst": "Podgórze",
+    "notatka": "Źródło mówi o obszarze pod Krakowem na prawym brzegu Wisły (Podgórze). Kropka stoi w Podgórzu."
+  },
+  "1648-1772-B-044": {
+    "kontekst": "Oświęcim",
+    "notatka": "Oświęcim leży poza zasięgiem mapy, która obejmuje powiat i gminy przyległe."
+  },
+  "1648-1772-B-023": {
+    "rzeka": "skawa",
+    "notatka": "Źródło mówi o postoju dywizji w dolinie Skawy, bez miejscowości. Zaznaczono dzisiejszy bieg rzeki w zasięgu mapy."
+  },
+  "1648-1772-A-033": {
+    "punkt_miedzy": [
+      "Klecza Dolna",
+      "Klecza Górna"
+    ],
+    "notatka": "Klecza Średnia nie występuje w OSM jako osobna miejscowość. Kropka stoi w połowie drogi między Kleczą Dolną a Górną."
   }
 }

@@ -7,6 +7,7 @@
   function rzut(ll) { return [RKM * (ll[0] - LON0) * RAD * COS0, -RKM * (ll[1] - LAT0) * RAD]; }
   function odrzut(p) { return [p[0] / (RKM * RAD * COS0) + LON0, -p[1] / (RKM * RAD) + LAT0]; }
 
+  var gKrawedz = d3.select('#e-krawedz');
   var sv = d3.select('#plotno'), swiat = d3.select('#swiat');
   var gMiejsca = d3.select('#e-miejsca'), gLinie = d3.select('#e-linie'), gEtykiety = d3.select('#e-etykiety'), gKropki = d3.select('#e-kropki');
   var dymek = document.getElementById('dymek'), listaGrupy = document.getElementById('lista-grupy');
@@ -64,7 +65,8 @@
   }
 
   /* ---------- filtr ---------- */
-  function pewnoscOk(e) { return e.pewnosc === 'A' || e.pewnosc === 'B' || (e.pewnosc === 'C' && stan.c) || (e.pewnosc === 'D' && stan.d); }
+  // Zjawiska obszarowe są widoczne także przy pewności C; wydarzenia punktowe o pewności C wymagają przełącznika.
+  function pewnoscOk(e) { return e.pewnosc === 'A' || e.pewnosc === 'B' || (e.pewnosc === 'C' && (stan.c || e.obszarowe)) || (e.pewnosc === 'D' && stan.d); }
   function wZakresie(e) {
     if (e.rok_od === null) return false;
     if (e.lata) return e.lata.some(function (r) { return r >= stan.od && r <= stan.do; });
@@ -98,7 +100,7 @@
     var obs = D.events.filter(function (e) { return e.rodzaj === 'obszar' && e.na_mapie; })
       .sort(function (a, b) { return kolejnosc[a.typ] - kolejnosc[b.typ]; });
     d3.select('#w-obszary').selectAll('path').data(obs, function (e) { return e.id; }).join('path')
-      .attr('class', function (e) { return 'obszar obszar-' + e.typ + (e.pewnosc === 'C' ? ' obszar-c' : ''); })
+      .attr('class', function (e) { return 'obszar obszar-' + e.typ + (e.pewnosc === 'C' || e.hipoteza || e.data_szacowana ? ' obszar-c' : ''); })
       .attr('d', function (e) { return sciezka(D.obszaryWgId[e.obszar].geometry); })
       .attr('tabindex', 0).attr('role', 'link')
       .attr('aria-label', function (e) { return e.tytul + ', ' + e.data + ', pewność ' + e.pewnosc; })
@@ -111,11 +113,17 @@
       .on('mouseenter focus', function (ev, e) { pokazDymek(e, ev); })
       .on('mouseleave blur', schowajDymek);
     rysujLinie();
+    d3.select('#w-nak-region').attr('d', sciezka(D.zasieg.features[0].geometry));
+    d3.select('#w-nak-powiat').attr('d', sciezka(D.powiat.features[0].geometry));
+    d3.selectAll('#w-nakladki path').on('click', function (ev) {
+      var n = widoczne().filter(function (e) { return e.rodzaj === 'nakladka' && (this.id === 'w-nak-region' ? e.nakladka === 'region' : e.nakladka === 'powiat'); }, this);
+      if (n.length === 1) idz(n[0]); else ustawPanel(true);
+    });
   }
   function rysujLinie() {
     var linie = D.events.filter(function (e) { return e.rodzaj === 'linia' && e.na_mapie; });
     var g = d3.select('#w-linie').selectAll('g').data(linie, function (e) { return e.id; }).join('g')
-      .attr('class', function (e) { return 'linia linia-' + e.linia_typ; })
+      .attr('class', function (e) { return 'linia linia-' + e.linia_typ + (e.hipoteza ? ' linia-hip' : ''); })
       .attr('tabindex', 0).attr('role', 'link')
       .attr('aria-label', function (e) { return e.tytul + ', ' + e.data + ', pewność ' + e.pewnosc; })
       .on('click', function (ev, e) { idz(e); })
@@ -135,6 +143,7 @@
     if (stan.od > 0 || stan.do < 1945) cz.push('lata=' + stan.od + '-' + stan.do);
     if (stan.c) cz.push('c=1');
     if (stan.d) cz.push('d=1');
+    if (stan.kontekst) cz.push('k=1');
     return cz.join('&');
   }
   var zapisCzasomierz = 0;
@@ -145,8 +154,110 @@
     location.hash.slice(1).split('&').forEach(function (p) { var i = p.indexOf('='); if (i > 0) h[p.slice(0, i)] = p.slice(i + 1); });
     if (h.lata && /^\d+-\d+$/.test(h.lata)) { var l = h.lata.split('-').map(Number); stan.od = Math.max(0, l[0]); stan.do = Math.min(1945, l[1]); }
     else if (K.domyslneLata) { stan.od = K.domyslneLata[0]; stan.do = K.domyslneLata[1]; }
-    stan.c = h.c === '1'; stan.d = h.d === '1';
+    stan.c = h.c === '1'; stan.d = h.d === '1'; stan.kontekst = h.k === '1';
     if (h.w) { var v = h.w.split(',').map(Number); if (v.length === 3 && v.every(isFinite) && v[2] > 0) doWidoku = v; }
+  }
+
+  /* ---------- szerszy kontekst ---------- */
+  var kKontekst = 1, widokKontekstu = null, kontekstDane = null, ruszona = false;
+  function doczytajKontekst() {
+    if (kontekstDane) return Promise.resolve();
+    return Promise.all([json('dane/geo/kontekst.geojson'), json('dane/kontekst_miejsca.json')]).then(function (w) {
+      kontekstDane = w[1];
+      d3.select('#w-kontekst').selectAll('path').data(w[0].features).join('path').attr('d', function (f) { return sciezka(f.geometry); });
+      zaplanujUklad();
+    });
+  }
+  function ustawKontekst(wlacz, animuj) {
+    stan.kontekst = wlacz;
+    if (animuj) ruszona = true;
+    var b = document.querySelector('.kontekst-btn');
+    b.textContent = wlacz ? 'Wróć do powiatu' : 'Pokaż szerszy kontekst';
+    b.setAttribute('aria-pressed', wlacz);
+    d3.select('#w-kontekst').attr('display', wlacz ? null : 'none');
+    if (wlacz) doczytajKontekst();
+    ustawWymiary(false);
+    if (animuj) sv.transition().duration(500).call(zoom.transform, wlacz ? widokKontekstu : widokStartowy);
+    zapiszPozniej();
+  }
+
+  /* ---------- panel zjawisk obejmujących cały region ---------- */
+  var KOLORY = { migracja_ludow: '#7d5ba6', szlak_handlowy: '#b0892f', wyprawa: '#b5473c', osadnictwo: '#6f9a5a', zmiana_wladzy_granic: '#4f6d8f',
+    kwaterunek_rekwizycje: '#a0623a', przemarsz: '#c0504a', najazd: '#c0504a', powstanie_bunt: '#a33a5a', epidemia: '#d9b300', epizootia: '#e8791e', glod: '#8a5a2b', inne: '#7a7a7a' };
+  function kolor(e) { return KOLORY[e.typ] || KOLORY.inne; }
+  var panelRecznie = false, podpisNakladek = '';
+  function ustawPanel(otwarty, reczny) {
+    if (reczny !== false) panelRecznie = true;
+    var el = document.querySelector('.panel-region');
+    el.classList.toggle('otwarta', otwarty);
+    el.querySelector('button').setAttribute('aria-expanded', otwarty);
+    zaplanujUklad();
+  }
+  function odswiezNakladki(evs, k) {
+    var lista = evs.filter(function (e) { return e.rodzaj === 'nakladka'; }).sort(function (a, b) { return a.rok_od - b.rok_od || (a.id < b.id ? -1 : 1); });
+    d3.selectAll('.kreski-n').attr('patternTransform', 'scale(' + (1 / k).toFixed(5) + ') rotate(45)');
+    var podpis = lista.map(function (e) { return e.id; }).join();
+    if (podpis === podpisNakladek) return;
+    podpisNakladek = podpis;
+    [['region', '#pasy-region', '#w-nak-region'], ['powiat', '#pasy-powiat', '#w-nak-powiat']].forEach(function (x) {
+      var w = lista.filter(function (e) { return e.nakladka === x[0]; }), wz = d3.select(x[1]), szer = 11;
+      wz.attr('width', Math.max(1, w.length) * szer).attr('height', 8);
+      wz.selectAll('rect').data(w, function (e) { return e.id; }).join('rect')
+        .attr('x', function (e, i) { return i * szer; }).attr('y', 0).attr('width', szer).attr('height', 8).attr('fill', kolor);
+      d3.select(x[2]).attr('display', w.length ? null : 'none');
+    });
+    var el = document.querySelector('.panel-region');
+    el.hidden = !lista.length;
+    el.querySelector('button').textContent = 'Zjawiska obejmujące cały region (' + lista.length + ')';
+    el.querySelector('ul').innerHTML = lista.map(function (e) {
+      var tagi = (e.hipoteza ? '<span class="tag">hipoteza</span>' : '') + (e.nieokreslony ? '<span class="tag">zasięg nieokreślony</span>' : '') + (e.nakladka === 'powiat' && !e.nieokreslony ? '<span class="tag">powiat</span>' : '');
+      return '<li><a href="' + esc(e.url) + '" class="link-wydarzenia"><i class="pr-kolor" style="background:' + kolor(e) + '"></i><span class="pz pz-' + e.pewnosc + '" aria-label="pewność ' + e.pewnosc + '">' + e.pewnosc + '</span> <span class="lw-data">' + esc(e.data) + '</span> ' + esc(e.etykieta) + ' ' + tagi + '</a></li>';
+    }).join('');
+    if (!panelRecznie) ustawPanel(lista.length > 0 && lista.length <= K.panelOtwartyDo, false);
+    ustawPrzyciski();
+  }
+
+  /* ---------- znaczniki na krawędzi: zdarzenia poza widokiem ---------- */
+  function rysujKrawedz(zn, zajete) {
+    var u = polozenia(), leg = document.querySelector('.legenda').getBoundingClientRect();
+    var x0 = 22, y0 = u.gora + 22, x1 = (W >= 700 ? leg.left : W) - 22, y1 = H - u.dol - 22, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    var uloz = zn.map(function (m) {
+      var dx = m.s[0] - cx, dy = m.s[1] - cy;
+      var t = Math.min(dx > 0 ? (x1 - cx) / dx : dx < 0 ? (x0 - cx) / dx : 9e9, dy > 0 ? (y1 - cy) / dy : dy < 0 ? (y0 - cy) / dy : 9e9);
+      return { e: m.e, kat: Math.atan2(dy, dx) * 180 / Math.PI, x: cx + dx * t, y: cy + dy * t };
+    }).sort(function (a, b) { return a.y - b.y || a.x - b.x; });
+    uloz.forEach(function (m, i) { // kilka zdarzeń w tym samym kierunku: rozsuwamy wzdłuż krawędzi
+      for (var j = 0; j < i; j++) { if (Math.abs(uloz[j].x - m.x) < 24 && Math.abs(uloz[j].y - m.y) < 24) m.y = uloz[j].y + 24; }
+      m.y = Math.min(m.y, y1);
+    });
+    var font = FONT.etykieta, lh = 16, asc = 12.5;
+    uloz.forEach(function (m) { zajete.push([m.x - 11, m.y - 11, m.x + 11, m.y + 11]); });
+    uloz.forEach(function (m) {
+      var tekst = m.e.etykieta + ', ' + m.e.data_krotka + ' (' + m.e.kontekst + ')';
+      var w0 = zawijaj(tekst, W < 700 ? 22 : 30), w = 0;
+      w0.forEach(function (t) { w = Math.max(w, szer(t, font)); });
+      var h = w0.length * lh + 1, naLewo = m.x > cx;
+      var r = naLewo ? prost(m.x - 13, m.y, w + 2, h, 'r', 'm') : prost(m.x + 13, m.y, w + 2, h, 'l', 'm');
+      m.wiersze = w0; m.po = naLewo ? 'r' : 'l';
+      if (wEkranie(r) && wolne(r, zajete)) { zajete.push(r); m.r = r; }
+    });
+    var sel = gKrawedz.selectAll('a').data(uloz, function (m) { return m.e.id; });
+    var nowe = sel.enter().append('a').attr('class', 'krawedz');
+    nowe.append('circle').attr('class', 'traf').attr('r', 12);
+    nowe.append('path').attr('class', 'strzalka').attr('d', 'M9 0 L-6 -6.5 L-6 6.5 Z');
+    nowe.append('text').attr('class', 'krawedz-tekst');
+    sel.exit().remove();
+    nowe.merge(sel).attr('href', function (m) { return m.e.url; })
+      .attr('aria-label', function (m) { return m.e.tytul + ', ' + m.e.data + ', poza mapą: ' + m.e.kontekst + ', pewność ' + m.e.pewnosc; })
+      .on('mouseenter focus', function (ev, m) { pokazDymek(m.e, ev); }).on('mouseleave blur', schowajDymek)
+      .each(function (m) {
+        var a = d3.select(this);
+        a.select('.traf').attr('cx', m.x).attr('cy', m.y);
+        a.select('.strzalka').attr('transform', 'translate(' + m.x.toFixed(1) + ' ' + m.y.toFixed(1) + ') rotate(' + m.kat.toFixed(1) + ')')
+          .attr('class', 'strzalka' + (m.e.pewnosc === 'C' || m.e.hipoteza ? ' strzalka-obrys' : ''));
+        var t = a.select('.krawedz-tekst');
+        if (m.r) { t.attr('display', null); wpiszLinie(t, m.wiersze, m.r, m.po, lh, asc); } else { t.attr('display', 'none'); }
+      });
   }
 
   /* ---------- wymiary i zoom ---------- */
@@ -155,10 +266,12 @@
     var dol = window.innerHeight - document.querySelector('.suwak-panel').getBoundingClientRect().top;
     document.querySelector('.zoom').style.bottom = (dol + 10) + 'px';
     document.querySelector('.legenda').style.bottom = window.innerWidth < 700 ? (dol + 10) + 'px' : '';
+    document.querySelector('.kontekst-btn').style.bottom = (dol + 10) + 'px';
+    document.querySelector('.panel-region').style.bottom = (window.innerWidth < 700 ? dol + 58 : dol + 10) + 'px';
   }
   function przeszkodyUi() {
     var r = [];
-    document.querySelectorAll('.naglowek, .legenda, .suwak-panel, .zoom').forEach(function (el) {
+    document.querySelectorAll('.naglowek, .legenda, .suwak-panel, .zoom, .kontekst-btn, .panel-region').forEach(function (el) {
       var b = el.getBoundingClientRect();
       if (b.width) r.push([b.left - 4, b.top - 4, b.right + 4, b.bottom + 4]);
     });
@@ -186,6 +299,18 @@
       u.gora + m + uzytH / 2 - kStart * (pw[1] + pw[3]) / 2).scale(kStart);
     var zapas = 300 / kMin;
     zakresSwiata = [[za[0] - zapas, za[1] - zapas - u.gora / kMin], [za[2] + zapas, za[3] + zapas + u.dol / kMin]];
+    // Szerszy kontekst: to samo okno, ale z dostępem do Europy Środkowej.
+    var ko0 = rzut([K.kontekstOkno[0], K.kontekstOkno[3]]), ko1 = rzut([K.kontekstOkno[2], K.kontekstOkno[1]]);
+    var lg = W >= 700 ? document.querySelector('.legenda').getBoundingClientRect().width + 12 : 0, wK = Math.max(40, uzytW - lg);
+    kKontekst = Math.min(wK / (ko1[0] - ko0[0]), uzytH / (ko1[1] - ko0[1]));
+    widokKontekstu = d3.zoomIdentity.translate(
+      m + wK / 2 - kKontekst * (ko0[0] + ko1[0]) / 2,
+      u.gora + m + uzytH / 2 - kKontekst * (ko0[1] + ko1[1]) / 2).scale(kKontekst);
+    if (stan.kontekst) {
+      var z = 300 / kKontekst;
+      zakresSwiata = [[ko0[0] - z, ko0[1] - z - u.gora / kKontekst], [ko1[0] + z, ko1[1] + z + u.dol / kKontekst]];
+      kMin = kKontekst;
+    }
     zoom.scaleExtent([kMin, kStart * K.maxPrzyblizenie]).extent([[0, 0], [W, H]]).translateExtent(zakresSwiata);
     if (srodek) {
       sv.call(zoom.transform, d3.zoomIdentity.translate(W / 2 - staryK * srodek[0], H / 2 - staryK * srodek[1]).scale(staryK));
@@ -264,6 +389,7 @@
     d3.select('#w-drogi').classed('z-drobnymi', k >= K.pxKmDrobneDrogi);
 
     var evs = widoczne();
+    odswiezNakladki(evs, k);
     // Ten sam typ na tym samym obszarze rysujemy raz: nakładanie przezroczystości udawałoby natężenie.
     var narysowane = {};
     d3.select('#w-obszary').selectAll('path').attr('display', function (e) {
@@ -279,15 +405,24 @@
     d3.select('#w-linie').selectAll('g').attr('display', function (e) { return naMapie(e) ? null : 'none'; });
     d3.selectAll('.kreski').attr('patternTransform', 'scale(' + (1 / k).toFixed(5) + ') rotate(45)');
 
-    var wgMiejsca = {};
-    evs.forEach(function (e) { if (e.miejscowosc && D.miejsca[e.miejscowosc]) wgMiejsca[e.miejscowosc] = (wgMiejsca[e.miejscowosc] || 0) + 1; });
-
     /* grupy: wszystkie kropki jednej miejscowości */
-    var grupy = {}, punkty = [];
+    var grupy = {}, poKrawedzi = [];
     evs.forEach(function (e) {
+      e._krawedz = false;
       if (e.rodzaj !== 'punkt') return;
+      if (e.kontekst) { // poza widokiem: znacznik na krawędzi zamiast kropki
+        var sk = ekr(rzut(D.miejsca[e.grupa])), ug = polozenia();
+        if (sk[0] < 0 || sk[0] > W || sk[1] < ug.gora || sk[1] > H - ug.dol) { e._krawedz = true; poKrawedzi.push({ e: e, s: sk }); return; }
+      }
       (grupy[e.grupa] = grupy[e.grupa] || { nazwa: e.grupa, lista: [], s: ekr(rzut(D.miejsca[e.grupa])) }).lista.push(e);
     });
+    var wgMiejsca = {};
+    evs.forEach(function (e) {
+      if (e._krawedz) return;
+      var n = e.kontekst || e.miejscowosc;
+      if (n && D.miejsca[n]) wgMiejsca[n] = (wgMiejsca[n] || 0) + 1;
+    });
+
     var odstep = Math.max(dotyk ? 15 : 11.5, Math.min(24, 10 + (k - 18) * 0.16));
     var zajete = przeszkodyUi();
     var zwin = k < K.pxKmGrupy;
@@ -315,12 +450,14 @@
       var sel = gKropki.selectAll('a.kropka').data(kropki, function (e) { return e.id; });
       var nowe = sel.enter().append('a').attr('class', 'kropka');
       nowe.append('circle').attr('class', 'traf').attr('r', dotyk ? 13 : 9);
+      nowe.append('circle').attr('class', 'pierscien').attr('r', 7.6);
       nowe.append('circle').attr('class', 'pkt');
       sel.exit().remove();
       var wsz = nowe.merge(sel);
       wsz.attr('href', function (e) { return e.url; })
         .attr('aria-label', function (e) { return e.tytul + ', ' + e.data + ', ' + (e.miejscowosc || '') + ', pewność ' + e.pewnosc; })
         .attr('transform', function (e) { return 'translate(' + e._d[0].toFixed(1) + ' ' + e._d[1].toFixed(1) + ')'; });
+      wsz.select('.pierscien').attr('display', function (e) { return e.data_szacowana || e.hipoteza ? null : 'none'; });
       wsz.select('.pkt').attr('r', 4.6).attr('class', function (e) {
         return 'pkt ' + (e.szara ? 'pkt-szara ' : '') + (e.pewnosc === 'C' ? 'pkt-obrys' : e.pewnosc === 'D' ? 'pkt-legenda' : 'pkt-pelna');
       });
@@ -328,6 +465,7 @@
         .order();
     }
     drukujKropki();
+    rysujKrawedz(poKrawedzi, zajete);
 
     var zn = gKropki.selectAll('g.znaczek').data(znaczki, function (g) { return g.nazwa; });
     var znN = zn.enter().append('g').attr('class', 'znaczek').attr('tabindex', 0).attr('role', 'button');
@@ -363,9 +501,10 @@
     var etyk = [], linie = [];
     var lh = 16, asc = 12.5;
     evs.slice().sort(priorytet).forEach(function (e) {
+      if (e.rodzaj === 'nakladka' || e._krawedz) return;
       var g = e.rodzaj === 'punkt' ? grupy[e.grupa] : null;
       if (g && g.zwinieta && g._opisana) return;
-      var tekst = e.etykieta + ', ' + e.data_krotka + (e.legenda ? ' (legenda)' : '');
+      var tekst = e.etykieta + ', ' + e.data_krotka + (e.legenda ? ' (legenda)' : '') + (e.hipoteza && !/hipote/i.test(e.etykieta) ? ' (hipoteza)' : '');
       var szerokosc = (W < 700 ? 22 : 30) + Math.min(10, Math.max(0, (k - 40) / 12));
       var wiersze = zawijaj(tekst, szerokosc);
       var w = 0; wiersze.forEach(function (t) { w = Math.max(w, szer(t, FONT.etykieta)); });
@@ -414,10 +553,17 @@
         if (wEkranie(kand[i]) && wolne(kand[i], zajete)) { zajete.push(kand[i]); miejscaUkl.push({ id: id, kl: kl, t: t, r: kand[i] }); return; }
       }
     }
+    if (stan.kontekst && kontekstDane) {
+      Object.keys(kontekstDane).forEach(function (n) {
+        if (!wyswietlane[n]) dodaj('k:' + n, 'm-miasto m-poza', n, FONT.miasto, ekr(rzut([kontekstDane[n].lon, kontekstDane[n].lat])), 18);
+      });
+      K.kontekstKraje.forEach(function (x) { dodaj('kr:' + x[0], 'm-gmina m-kraj', x[0].toUpperCase(), FONT.gmina, ekr(rzut([x[1], x[2]])), 14); });
+    }
     D.miejscowosciPosort.forEach(function (m) {
+      if (k < 8 && m.nazwa !== 'Wadowice') return;
       if (m.miasto && !wyswietlane[m.nazwa] && m.widok) { dodaj('p:' + m.id, 'm-miasto' + (m.wew ? '' : ' m-poza'), m.nazwa, FONT.miasto, ekr(m.xy), 18); }
     });
-    D.gminyEtykiety.forEach(function (g) {
+    if (k >= 8) D.gminyEtykiety.forEach(function (g) {
       var s = ekr(g.xy), blisko = miejscaUkl.some(function (m) {
         return m.t === g.nazwa && Math.abs((m.r[0] + m.r[2]) / 2 - s[0]) < 110 && Math.abs((m.r[1] + m.r[3]) / 2 - s[1]) < 60;
       });
@@ -469,10 +615,12 @@
       pusto.hidden = false;
     } else { pusto.hidden = true; }
     var poza = D.events.filter(function (e) { return pewnoscOk(e) && !e.na_mapie && !e.hipoteza; }).length;
-    document.getElementById('link-poza-mapa').textContent = 'Regionalne, obszarowe i bez daty, tylko na liście: ' + poza;
+    var lp2 = document.getElementById('link-poza-mapa');
+    lp2.textContent = 'Tylko na liście: ' + poza;
+    lp2.parentNode.hidden = !poza;
     var hipotezy = D.events.filter(function (e) { return e.hipoteza; }).length;
     var lh2 = document.getElementById('link-hipotezy');
-    lh2.textContent = 'Hipotezy, tylko na liście: ' + hipotezy;
+    lh2.textContent = 'Hipotezy, lista: ' + hipotezy;
     lh2.parentNode.hidden = !hipotezy;
   }
 
@@ -511,7 +659,7 @@
     document.getElementById('lg-zamknij').focus();
   }
   function pokazListeMiejsca(nazwa, x, y) {
-    var w = widoczne().filter(function (e) { return e.miejscowosc === nazwa; });
+    var w = widoczne().filter(function (e) { return e.miejscowosc === nazwa || e.kontekst === nazwa; });
     var bd = D.events.filter(function (e) { return e.miejscowosc === nazwa && e.rok_od === null && pewnoscOk(e); });
     pokazListe(nazwa, w, x, y, bd);
   }
@@ -567,8 +715,13 @@
       .attr('aria-label', function (o) { return 'Pokaż lata ' + o.od + '–' + o.do; })
       .on('click', function (ev, o) { ustawLata(o.od, o.do); });
     var lata = {};
-    D.events.forEach(function (e) { if (e.rok_od !== null && e.na_mapie) (e.lata || [e.rok_od]).forEach(function (r) { lata[r] = 1; }); });
+    D.events.forEach(function (e) { if (e.rok_od !== null && e.na_mapie && !e.data_szacowana) (e.lata || [e.rok_od]).forEach(function (r) { lata[r] = 1; }); });
+    var szac = D.events.filter(function (e) { return e.data_szacowana && e.na_mapie; });
     d3.select('#suwak-znaczniki').selectAll('i').data(Object.keys(lata).map(Number)).join('i').style('left', function (r) { return rokNaPoz(r) * 100 + '%'; });
+    d3.select('#suwak-znaczniki').selectAll('b').data(szac).join('b')
+      .attr('title', function (e) { return e.data; })
+      .style('left', function (e) { return rokNaPoz(e.rok_od) * 100 + '%'; })
+      .style('width', function (e) { return (rokNaPoz(e.rok_do) - rokNaPoz(e.rok_od)) * 100 + '%'; });
     rysujLataSuwaka();
     odswiezSuwak();
     function przeciagnij(u, ktory) {
@@ -609,12 +762,13 @@
 
   /* ---------- zdarzenia ---------- */
   function podepnij() {
-    zoom.on('zoom', function (ev) { tr = ev.transform; schowajDymek(); zaplanujUklad(); zapiszPozniej(); });
+    zoom.on('zoom', function (ev) { if (ev.sourceEvent) ruszona = true; tr = ev.transform; schowajDymek(); zaplanujUklad(); zapiszPozniej(); });
     sv.call(zoom);
-    document.getElementById('zoom-plus').addEventListener('click', function () { sv.transition().duration(200).call(zoom.scaleBy, 1.6); });
-    document.getElementById('zoom-minus').addEventListener('click', function () { sv.transition().duration(200).call(zoom.scaleBy, 1 / 1.6); });
+    document.getElementById('zoom-plus').addEventListener('click', function () { ruszona = true; sv.transition().duration(200).call(zoom.scaleBy, 1.6); });
+    document.getElementById('zoom-minus').addEventListener('click', function () { ruszona = true; sv.transition().duration(200).call(zoom.scaleBy, 1 / 1.6); });
     document.getElementById('mapa').addEventListener('keydown', function (ev) {
       if (ev.target.id !== 'mapa') return;
+      ruszona = true;
       var kr = 70 / tr.k, m = { ArrowLeft: [kr, 0], ArrowRight: [-kr, 0], ArrowUp: [0, kr], ArrowDown: [0, -kr] }[ev.key];
       if (m) { ev.preventDefault(); sv.call(zoom.translateBy, m[0], m[1]); }
       if (ev.key === '+' || ev.key === '=') sv.call(zoom.scaleBy, 1.4);
@@ -630,6 +784,9 @@
     }
     document.getElementById('pokaz-c').addEventListener('change', function (ev) { stan.c = ev.target.checked; zaplanujUklad(); zapiszPozniej(); });
     document.getElementById('pokaz-d').addEventListener('change', function (ev) { stan.d = ev.target.checked; zaplanujUklad(); zapiszPozniej(); });
+    document.querySelector('.kontekst-btn').addEventListener('click', function () { ustawKontekst(!stan.kontekst, true); });
+    document.querySelector('.panel-region button').addEventListener('click', function () { ustawPanel(!document.querySelector('.panel-region').classList.contains('otwarta')); });
+    gKrawedz.on('click', function (ev) { przekazStan(ev); });
     var lp = document.getElementById('legenda-przelacz');
     lp.addEventListener('click', function () {
       var ot = document.getElementById('legenda').classList.toggle('otwarta');
@@ -643,7 +800,12 @@
     ustawPrzyciski();
     if (window.ResizeObserver) new ResizeObserver(ustawPrzyciski).observe(document.querySelector('.suwak-panel'));
     var opoz = 0;
-    window.addEventListener('resize', function () { clearTimeout(opoz); opoz = setTimeout(function () { ustawWymiary(true); rysujLataSuwaka(); zaplanujUklad(); }, 120); });
+    window.addEventListener('resize', function () { clearTimeout(opoz); opoz = setTimeout(function () {
+        // Dopóki nikt nie ruszał mapą, po zmianie rozmiaru okna wracamy do widoku startowego.
+        if (ruszona || doWidoku) ustawWymiary(true);
+        else { ustawWymiary(false); sv.call(zoom.transform, stan.kontekst ? widokKontekstu : widokStartowy); }
+        rysujLataSuwaka(); zaplanujUklad();
+      }, 120); });
     window.addEventListener('pageshow', function (ev) { if (ev.persisted) zaplanujUklad(); });
   }
 
@@ -688,11 +850,12 @@
     ustawWymiary(false);
     podepnij();
     rysujSuwak();
+    if (stan.kontekst) ustawKontekst(true, false);
     if (doWidoku) {
       var c = rzut([doWidoku[0], doWidoku[1]]), kk = doWidoku[2];
       sv.call(zoom.transform, d3.zoomIdentity.translate(W / 2 - kk * c[0], H / 2 - kk * c[1]).scale(kk));
     } else {
-      sv.call(zoom.transform, widokStartowy);
+      sv.call(zoom.transform, stan.kontekst ? widokKontekstu : widokStartowy);
     }
     uklad();
   }).catch(function (b) {

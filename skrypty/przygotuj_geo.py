@@ -145,6 +145,22 @@ def main():
                             "properties": {"nazwa": n["tags"]["name"], "typ": n["tags"]["place"], "gmina": None, "w_powiecie": False, "osm_wezel": n["id"]}}
                            for n in wczytaj("punkty_tras") if n["tags"].get("place") in ("city", "town")])
 
+    # Szerszy kontekst: granice państw (Natural Earth, domena publiczna) w oknie Europy Środkowej.
+    x0, y0, x1, y1 = 12.5, 47.3, 23.5, 52.2
+    ne = json.loads((CACHE / "ne_countries.geojson").read_text(encoding="utf-8"))["features"]
+    linie = []
+    for f in ne:
+        wielo = f["geometry"]["coordinates"] if f["geometry"]["type"] == "MultiPolygon" else [f["geometry"]["coordinates"]]
+        for pol in wielo:
+            for r in pol:
+                if any(x0 <= p[0] <= x1 and y0 <= p[1] <= y1 for p in r):
+                    linie.append([[round(p[0], 3), round(p[1], 3)] for p in r])
+    (WY / "kontekst.geojson").write_text(json.dumps({"type": "FeatureCollection", "attribution": "Natural Earth (domena publiczna)", "features": [
+        {"type": "Feature", "geometry": {"type": "MultiLineString", "coordinates": linie}, "properties": {}}]}, separators=(",", ":")), encoding="utf-8")
+    print(f"  kontekst.geojson: {len(linie)} linii, {(WY / 'kontekst.geojson').stat().st_size // 1024} KB")
+    miejsca_k = json.loads((CACHE / "kontekst_miejsca.json").read_text(encoding="utf-8"))
+    (ROOT / "dane" / "kontekst_miejsca.json").write_text(json.dumps(miejsca_k, ensure_ascii=False, indent=1), encoding="utf-8")
+
     # Miejscowości.
     ob_gmin = [(c["properties"]["nazwa"], geo.Obszar(geo.pierscienie_geom(c["geometry"]))) for c in cechy_gmin]
     miejsca = []

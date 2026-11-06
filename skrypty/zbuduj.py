@@ -65,6 +65,9 @@ def fmt_jeden(iso, dlugi):
 
 def fmt_data(rek, dlugi=True):
     od, do, prec = rek["data_od"], rek["data_do"], rek["precyzja_daty"]
+    if rek.get("data_szacowana") and od:
+        r0, r1 = czesci(od)[0], czesci(do or od)[0]
+        return f"ok. {r0}–{r1}" if r1 != r0 else f"ok. {r0}"
     if od is None and do is None:
         return "data nieznana"
     if od is None:
@@ -238,30 +241,40 @@ def buduj_rekordy(pliki, ustawienia):
                 "weryfikacja": {"status": r["weryfikacja"]["status"], "data": r["weryfikacja"].get("data_sprawdzenia")},
                 "_data_od": r["data_od"], "szara": r["zakres"] == "bufor" or (r["zakres"] == "region" and bool(r["miejscowosc"])), "rodzaj": None, "punkt": None, "grupa": None, "obszar": None,
                 "przyblizony": False, "notatka_lokalizacji": "", "na_mapie": False, "powod_listy": "",
+                "obszarowe": r.get("charakter") == "obszar", "zasieg": r.get("zasieg"),
             }
+            if r.get("data_szacowana"):
+                w.update(data_szacowana=True, szacunek_podstawa=r.get("data_szacunek_podstawa") or "", szacunek_pewnosc=r.get("data_szacunek_pewnosc") or "")
             if r["weryfikacja"]["status"] == "czesciowo":
                 w["weryfikacja"]["uwagi"] = r["weryfikacja"].get("uwagi", "")
 
             if r.get("zasieg_opis"):
                 w["zasieg_opis"] = r["zasieg_opis"]
             if r["id"] in ustawienia["hipotezy"] or r.get("hipoteza"):
-                # Hipoteza nie jest zdarzeniem: bez geometrii, tylko własna podstrona i sekcja listy.
+                # Hipoteza ma plakietkę i przerywaną linię; na liście ma własną sekcję.
                 notatka = ustawienia["hipotezy"].get(r["id"], "Źródło przedstawia to zjawisko jako hipotezę lub przedmiot sporu badaczy.")
-                w.update(hipoteza=True, notatka_hipotezy=notatka, powod_listy="hipoteza")
-                wyn.append(w)
-                continue
+                w.update(hipoteza=True, notatka_hipotezy=notatka)
 
             usta = lok.get(r["id"], {})
             if usta.get("data_tekst"):
                 w["data"] = w["data_krotka"] = usta["data_tekst"]
-            # Zjawisko obszarowe rysujemy tylko dla typów z kolorem (epidemia, epizootia, głód) i wskazanych miejscowości.
-            # Pozostałe mają zasięg opisany słownie (np. cyrkuł, dolina), więc zostają na liście.
-            obszarowe = r.get("charakter") == "obszar"
+            obszarowe = w["obszarowe"]
             w["notatka_lokalizacji"] = usta.get("notatka", "")
 
             if usta.get("lata"):
                 w["lata"] = usta["lata"]
-            if usta.get("linia") or usta.get("rzeka"):
+            if usta.get("kontekst"):
+                # Poza zasięgiem mapy: znacznik na krawędzi, a w szerszym kontekście kropka w miejscu nazwanym w źródle.
+                mk = ustawienia["kontekst"][usta["kontekst"]]
+                pt = [mk["lon"], mk["lat"]]
+                uzyte_miejsca[usta["kontekst"]] = pt
+                w.update(rodzaj="punkt", kontekst=usta["kontekst"], grupa=usta["kontekst"], punkt=pt, przyblizony=True, szara=True)
+            elif usta.get("punkt_miedzy"):
+                pts = [miejsca.punkt(nz)["geometry"]["coordinates"] for nz in usta["punkt_miedzy"]]
+                pt = [round(sum(p[0] for p in pts) / len(pts), 5), round(sum(p[1] for p in pts) / len(pts), 5)]
+                uzyte_miejsca[r["miejscowosc"]] = pt
+                w.update(rodzaj="punkt", grupa=r["miejscowosc"], punkt=pt, przyblizony=True)
+            elif usta.get("linia") or usta.get("rzeka"):
                 w["przyblizony"] = True
                 if usta.get("rzeka"):
                     linie = geojson(usta["rzeka"])[0]["geometry"]["coordinates"]
@@ -328,16 +341,21 @@ def buduj_rekordy(pliki, ustawienia):
                 if pt is not None:
                     w.update(rodzaj="punkt", grupa=r["miejscowosc"], punkt=pt)
 
+            if not w["rodzaj"] and (obszarowe or r["zakres"] == "region") and not r["miejscowosc"]:
+                # Zasięg bez granic w danych: nakładka. Szerszy obejmuje cały widok, reszta tylko powiat.
+                if r.get("zasieg") == "sasiedni":
+                    ostrzezenia.append(f"{r['id']}: zasięg sąsiedni bez wpisu „kontekst” w lokalizacje_wydarzen.json")
+                elif r.get("zasieg") == "szerszy":
+                    w.update(rodzaj="nakladka", nakladka="region", przyblizony=True)
+                else:
+                    w.update(rodzaj="nakladka", nakladka="powiat", przyblizony=True, nieokreslony=not r.get("zasieg"))
             if rok_od is None:
                 w["powod_listy"] = "bez daty"
             elif w["rodzaj"]:
                 w["na_mapie"] = True
-            elif obszarowe:
-                w["powod_listy"] = "zjawisko obszarowe"
-            elif r["miejscowosc"]:
-                w["powod_listy"] = "poza zasięgiem mapy" if r["zakres"] != "powiat" else "brak współrzędnych"
             else:
-                w["powod_listy"] = "regionalne"
+                w["powod_listy"] = "poza zasięgiem mapy" if r["miejscowosc"] and r["zakres"] != "powiat" else "brak współrzędnych"
+                ostrzezenia.append(f"{r['id']}: brak miejsca na mapie ({w['powod_listy']})")
 
             wyn.append(w)
 
@@ -401,9 +419,11 @@ def podstrona_wydarzenia(w, wg_sluga, wymiary, obszary_ind, wygenerowano):
     t = [f'<p class="data-wydarzenia">{e(w["data"])}</p>', f'<h1>{e(w["tytul"])}</h1>']
     if w.get("hipoteza"):
         t.append(f'<p class="plakietka plakietka-legenda"><span><b class="znak-hipotezy">Hipoteza.</b> {e(w["notatka_hipotezy"])}</span></p>')
-    if w["data_uwagi"]:
+    if w.get("data_szacowana"):
+        t.append(f'<div class="ob-przyblizony"><b>Data szacowana: {e(w["data"])}.</b> Źródło nie podaje daty. Podstawa szacunku: {e(w["szacunek_podstawa"])} Pewność szacunku: {e({"wysoka": "wysoka", "srednia": "średnia", "niska": "niska"}.get(w["szacunek_pewnosc"], w["szacunek_pewnosc"]))}.</div>')
+    elif w["data_uwagi"]:
         t.append(f'<p class="uwagi">{e(w["data_uwagi"])}</p>')
-    miejsce = w["miejscowosc"] or ("zjawisko obszarowe, bez jednej miejscowości" if w["powod_listy"] == "zjawisko obszarowe" or w["rodzaj"] == "linia" else "region, bez jednej miejscowości")
+    miejsce = w["miejscowosc"] or w.get("kontekst") or ("zjawisko obszarowe, bez jednej miejscowości" if w["obszarowe"] else "region, bez jednej miejscowości")
     if w["szara"]:
         miejsce += " (poza powiatem)"
     meta = [("Miejsce", miejsce)]
@@ -423,6 +443,16 @@ def podstrona_wydarzenia(w, wg_sluga, wymiary, obszary_ind, wygenerowano):
         t.append(f'<p class="ob-przyblizony"><b>Obszar przybliżony.</b> {e(w["notatka_lokalizacji"])}</p>')
     if w["rodzaj"] == "linia":
         t.append(f'<p class="ob-przyblizony"><b>Przebieg przybliżony.</b> {e(w["notatka_lokalizacji"])}</p>')
+    if w["rodzaj"] == "punkt" and w["przyblizony"]:
+        t.append(f'<p class="ob-przyblizony"><b>Położenie przybliżone.</b> {e(w["notatka_lokalizacji"])}</p>')
+    if w["rodzaj"] == "nakladka":
+        if w["nakladka"] == "region":
+            opis_n = "Zjawisko obejmuje obszar większy od powiatu, dlatego na mapie jest nakładką na cały widok, bez granic."
+        elif w.get("nieokreslony"):
+            opis_n = "Źródła nie pozwalają ustalić granic tego obszaru, dlatego na mapie jest nakładką na cały powiat."
+        else:
+            opis_n = "Źródło nie podaje dokładniejszego miejsca w powiecie, dlatego na mapie jest nakładką na cały powiat."
+        t.append(f'<p class="ob-przyblizony"><b>{"Zasięg nieokreślony" if w.get("nieokreslony") else "Obszar przybliżony"}.</b> {opis_n}</p>')
     t.append(mini_mapa(w, wymiary, obszary_ind))
 
     t.append("<h2>Źródła</h2><ul class=\"zrodla\">")
@@ -466,14 +496,24 @@ def podstrona_wydarzenia(w, wg_sluga, wymiary, obszary_ind, wygenerowano):
 def mini_mapa(w, wym, obszary_ind):
     x0, y0, sz, wy = wym
     warstwy, podpis = [], ""
-    if w["rodzaj"] == "punkt":
+    if w.get("kontekst"):
+        podpis = f"Położenie przybliżone: {w['kontekst']}, poza zasięgiem tej małej mapy. Na głównej mapie użyj przycisku „Pokaż szerszy kontekst”."
+    elif w["rodzaj"] == "nakladka":
+        if w["nakladka"] == "region":
+            warstwy.append(f'<rect x="{x0:.2f}" y="{y0:.2f}" width="{sz:.2f}" height="{wy:.2f}" fill="#4f6d8f" fill-opacity="0.16"/>')
+            podpis = "Zjawisko obejmuje obszar większy niż ta mapa."
+        else:
+            d = "".join("M" + "L".join(f"{geo.rzut(p)[0]:.2f} {geo.rzut(p)[1]:.2f}" for p in r) + "Z" for r in geo.pierscienie_geom(geojson("powiat")[0]["geometry"]))
+            warstwy.append(f'<path d="{d}" fill="#4f6d8f" fill-opacity="0.2"/>')
+            podpis = "Zasięg nieokreślony: zaznaczono cały powiat." if w.get("nieokreslony") else "Zaznaczono cały powiat."
+    elif w["rodzaj"] == "punkt":
         x, y = geo.rzut(w["punkt"])
         kol = "#8a8a8a" if w["szara"] else "#d10a11"
         pelna = w["pewnosc"] in ("A", "B")
         styl = f'fill="{kol}"' if pelna else f'fill="#fff" stroke="{kol}" stroke-width="0.32"'
         warstwy.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="0.7" {styl}/>')
         warstwy.append(f'<text x="{x:.2f}" y="{y - 1.2:.2f}" text-anchor="middle" class="mini-etykieta">{e(w["miejscowosc"])}</text>')
-        podpis = "Punkt to środek miejscowości, nie dokładne miejsce zdarzenia."
+        podpis = "Położenie przybliżone." if w["przyblizony"] else "Punkt to środek miejscowości, nie dokładne miejsce zdarzenia."
     elif w["rodzaj"] == "obszar":
         f = obszary_ind[w["obszar"]]
         d = ""
@@ -505,8 +545,6 @@ def mini_mapa(w, wym, obszary_ind):
         podpis = f"{w['miejscowosc']} leży poza zasięgiem mapy, która obejmuje powiat i gminy przyległe."
     elif w["miejscowosc"]:
         podpis = f"Nie ustalono współrzędnych miejscowości {w['miejscowosc']}."
-    if w["rok_od"] is None and w["rodzaj"]:
-        podpis = "Źródło nie podaje roku, dlatego wydarzenia nie ma na głównej mapie ani na suwaku. " + podpis
     return (
         f'<figure style="margin:0"><svg class="mini" viewBox="{x0:.2f} {y0:.2f} {sz:.2f} {wy:.2f}" role="img" aria-label="Mała mapa z lokalizacją wydarzenia">'
         f'<style>.mini-etykieta{{font:700 1.5px Helvetica,Arial,sans-serif;fill:#000;paint-order:stroke;stroke:#fff;stroke-width:.5px}}</style>'
@@ -555,16 +593,18 @@ def pozycja_listy(w, kierunek="../"):
 
 
 def strona_listy(wyd, wygenerowano):
-    na = [w for w in wyd if w["na_mapie"]]
+    na = [w for w in wyd if w["na_mapie"] and not w.get("hipoteza")]
     poza = [w for w in wyd if not w["na_mapie"] and not w.get("hipoteza")]
     hip = [w for w in wyd if w.get("hipoteza")]
     t = ["<h1>Wszystkie wydarzenia</h1>",
-         f'<p>Na tej liście są wszystkie rekordy, także słabiej udokumentowane (pewność C) i te, których nie ma na mapie. Razem: {len(na) + len(poza)}{" oraz hipotezy na końcu listy" if hip else ""}. Litera przy wydarzeniu to pewność, wyjaśniona na stronie <a data-z-stanem href="../o-projekcie/">O projekcie</a>.</p>',
+         f'<p>Na tej liście są wszystkie rekordy, także słabiej udokumentowane (pewność C). Razem: {len(na) + len(poza)}{" oraz hipotezy na końcu listy" if hip else ""}. Data z „ok.” to szacunek, gdy źródło nie podaje daty. Litera przy wydarzeniu to pewność, wyjaśniona na stronie <a data-z-stanem href="../o-projekcie/">O projekcie</a>.</p>',
          '<label for="filtr" style="font-weight:600">Szukaj w tytułach, opisach i nazwach miejsc</label>',
          '<input id="filtr" class="filtr" type="search" autocomplete="off" placeholder="np. Lanckorona, pożar, Suworow">',
          '<p id="licznik" class="licznik" role="status"></p>',
-         f'<section class="sekcja-wykaz"><h2>Na mapie, chronologicznie</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in na)}</ul></section>',
-         f'<section class="sekcja-wykaz" id="poza-mapa"><h2>Tylko na liście: regionalne, obszarowe, poza zasięgiem mapy, bez daty</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in poza)}</ul></section>']
+         f'<section class="sekcja-wykaz"><h2>Chronologicznie</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in na)}</ul></section>',
+         ]
+    if poza:
+        t.append(f'<section class="sekcja-wykaz" id="poza-mapa"><h2>Tylko na liście</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in poza)}</ul></section>')
     if hip:
         t.append(f'<section class="sekcja-wykaz" id="hipotezy"><h2>Hipotezy, nie potwierdzone wydarzenia</h2><ul class="lista-wszystkich">{"".join(pozycja_listy(w) for w in hip)}</ul></section>')
     return strona("Wszystkie wydarzenia: powiat wadowicki", "\n".join(t), 1, wygenerowano,
@@ -601,7 +641,7 @@ def strona_o_projekcie(wszystkie, epoki, wygenerowano, projekt):
     hipotezy_txt = ""
     if hip:
         hipotezy_txt = (f'<p>Osobno pokazujemy hipotezy ({len(hip)}): zjawiska, które źródła przedstawiają jako hipotezę lub przedmiot sporu badaczy. '
-                        'Nie są to potwierdzone wydarzenia, nie ma ich na mapie i nie wchodzą do powyższych liczb. '
+                        'Nie są to potwierdzone wydarzenia i nie wchodzą do powyższych liczb. Na mapie mają przerywaną linię, a na podstronie plakietkę. '
                         '<a data-z-stanem href="../wydarzenia/#hipotezy">Lista hipotez</a>.</p>\n')
     puste_epoki = "".join(
         f'<p>Epoka {x["od"]}–{x["do"]} jest opracowana, ale w sprawdzonych źródłach nie ma w niej zdarzeń, które można wskazać na mapie'
@@ -624,7 +664,7 @@ def strona_o_projekcie(wszystkie, epoki, wygenerowano, projekt):
 <dt><b>C</b></dt><dd>Tylko strona popularna lub lokalna albo źródło mówi „prawdopodobnie”.</dd>
 <dt><b>D</b></dt><dd>Legenda lub tradycja. Zawsze z wyraźnym oznaczeniem.</dd>
 </dl>
-<p>Mapa domyślnie pokazuje pewność A i B jako pełne kropki. Pewność C można włączyć w legendzie, wtedy kropka jest samym obrysem.</p>
+<p>Mapa domyślnie pokazuje wydarzenia punktowe o pewności A i B jako pełne kropki. Pewność C można włączyć w legendzie, wtedy kropka jest samym obrysem. Zjawiska obszarowe są widoczne także przy pewności C, bo w epokach wczesnych nie ma lepszych danych.</p>
 
 <h2>Brak wydarzeń nie znaczy, że nic się nie działo</h2>
 <p>{e(', '.join(puste))}: te gminy nie mają dziś żadnego wydarzenia. To brak dowodu w sprawdzonych źródłach, a nie dowód, że nic się tam nie działo. Tak samo należy czytać każde puste miejsce i każdy pusty okres na mapie.</p>
@@ -634,9 +674,10 @@ def strona_o_projekcie(wszystkie, epoki, wygenerowano, projekt):
 <li>Mapa pokazuje dzisiejsze granice powiatu i gmin, choć wydarzenia działy się w innych ustrojach i podziałach administracyjnych.</li>
 <li>Kropka stoi w środku miejscowości według OSM, a nie w dokładnym miejscu zdarzenia. Kropki jednej miejscowości są rozsunięte tylko po to, by dało się je kliknąć.</li>
 <li>Obszar epidemii, zarazy bydła lub głodu to dzisiejsza granica wskazanej miejscowości. Gdy źródło jest mniej dokładne albo granicy brak, podstrona wydarzenia ma oznaczenie „obszar przybliżony”.</li>
-<li>Zjawiska obszarowe, których zasięg źródła opisują tylko słownie (np. „cyrkuł myślenicki”), nie są rysowane: dawnych granic nie ma w danych, a rysowanie byłoby zgadywaniem.</li>
+<li>Zjawiska obejmujące obszar większy od powiatu są nakładką na cały widok, bez granic: dawnych granic nie ma w danych. Gdy źródło nie pozwala ustalić obszaru, nakładka obejmuje powiat i ma podpis „zasięg nieokreślony”.</li>
+<li>Zjawiska poza zasięgiem mapy mają znacznik ze strzałką na krawędzi, a przycisk „Pokaż szerszy kontekst” pokazuje je w przybliżonym położeniu: w miejscu nazwanym w źródle, a nie w dokładnych granicach zjawiska.</li>
 <li>Trasy na mapie to schematyczne linie między miejscami wskazanymi w źródłach, a nie dokładny przebieg dróg. Linia rzeki to jej dzisiejszy bieg, a nie zasięg zalania.</li>
-<li>Wydarzenia regionalne, obszarowe i rekordy bez roku są tylko na <a data-z-stanem href="../wydarzenia/#poza-mapa">liście</a>. Gdy źródła podają różne daty, opis różnic jest na podstronie wydarzenia.</li>
+<li>Gdy źródło nie podaje daty, pokazujemy szacunek ze znaczkiem „ok.” i przerywanym obrysem. Podstawa szacunku jest na podstronie wydarzenia. Gdy źródła podają różne daty, opis różnic też jest na podstronie.</li>
 <li>Część źródeł papierowych i rękopiśmiennych nie została sprawdzona bezpośrednio, tylko przez opracowania, które je cytują.</li>
 </ul>
 
@@ -644,7 +685,7 @@ def strona_o_projekcie(wszystkie, epoki, wygenerowano, projekt):
 <p><a href="../dane/events.json">Wszystkie wydarzenia w jednym pliku JSON</a>.{f' <a href="{e(repo)}">Repozytorium z kodem i granicami GeoJSON</a>.' if repo else ''}</p>
 
 <h2>Atrybucje</h2>
-<p>Granice, drogi i miejscowości: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, licencja Open Database License (ODbL). Biblioteka <a href="https://d3js.org">D3</a> (licencja ISC).</p>
+<p>Granice, drogi i miejscowości: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, licencja Open Database License (ODbL). Granice państw w szerszym kontekście: <a href="https://www.naturalearthdata.com">Natural Earth</a> (domena publiczna). Biblioteka <a href="https://d3js.org">D3</a> (licencja ISC).</p>
 <details><summary>Źródła użyte w danych ({len(lista_zr)})</summary><ul>{''.join(lista_zr)}</ul></details>
 """
     return strona("O projekcie: wydarzenia w powiecie wadowickim", t, 1, wygenerowano, opis="Skąd są dane, jak liczona jest pewność, ograniczenia i atrybucje.")
@@ -671,6 +712,7 @@ def main():
         "etykiety": wczytaj_json(DANE / "etykiety.json", {}),
         "hipotezy": wczytaj_json(DANE / "hipotezy.json", {}),
         "slugi": wczytaj_json(DANE / "slugi.json", {}),
+        "kontekst": wczytaj_json(DANE / "kontekst_miejsca.json", {}),
         "w_toku": {k for k in pliki if statusy.get(k, "opracowana") != "opracowana"},
     }
     ustawienia["lok"].pop("_opis", None)
