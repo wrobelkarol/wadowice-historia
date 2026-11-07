@@ -522,7 +522,7 @@ def mini_mapa(w, wym, obszary_ind):
         for pol in f["geometry"]["coordinates"]:
             for r in pol:
                 d += "M" + "L".join(f"{geo.rzut(p)[0]:.2f} {geo.rzut(p)[1]:.2f}" for p in r) + "Z"
-        kol = {"epidemia": ("#f5c800", "#a88900"), "epizootia": ("#e8791e", "#a8540f"), "glod": ("#8a5a2b", "#5f3c1b"), "osadnictwo": ("#6f9a5a", "#47703a")}[w["typ"]]
+        kol = {"epidemia": ("#f5c800", "#a88900"), "epizootia": ("#e8791e", "#a8540f"), "glod": ("#8a5a2b", "#5f3c1b"), "osadnictwo": ("#6f9a5a", "#47703a")}.get(w["typ"], ("#7a7a7a", "#4f4f4f"))
         warstwy.append(f'<path d="{d}" fill="{kol[0]}" fill-opacity="0.5" fill-rule="evenodd" stroke="{kol[1]}" stroke-width="0.12"/>')
         x, y = geo.rzut(f["properties"]["etykieta"])
         warstwy.append(f'<text x="{x:.2f}" y="{y:.2f}" text-anchor="middle" class="mini-etykieta">{e(w["miejsce_obszaru"] if "," not in w["miejsce_obszaru"] else "")}</text>')

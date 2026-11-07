@@ -12,7 +12,7 @@ UA = "wadowice-historia-build/0.1"
 NE = "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@v5.1.2/geojson/ne_50m_admin_0_countries.geojson"
 MIEJSCA = {"Ołomuniec": "Olomouc", "Brama Morawska": "Moravská brána", "Gliwice": "Gliwice", "Cieszyn": "Cieszyn",
            "Maków Podhalański": "Maków Podhalański", "Podgórze": "Podgórze, Kraków", "Oświęcim": "Oświęcim",
-           "Kraków": "Kraków", "Praga": "Praha"}
+           "Kraków": "Kraków", "Praga": "Praha", "Żywiec": "Żywiec"}
 
 
 def curl(*arg):

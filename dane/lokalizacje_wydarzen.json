@@ -157,5 +157,55 @@
   },
   "1564-1648-B-009": {
     "notatka": "Spór dotyczył starostwa lanckorońskiego. Źródło nie wymienia żadnych wsi, więc granic starostwa nie zaznaczono; nakładka obejmuje cały powiat i jest tylko przybliżeniem."
+  },
+  "1648-1772-C-019": {
+    "kontekst": "Żywiec",
+    "notatka": "Źródło mówi o Żywiecczyźnie i Beskidzie Zachodnim, obszarze poza powiatem. Kropka stoi w Żywcu, jednym z nazwanych tam miejsc; to położenie przybliżone."
+  },
+  "1648-1772-C-009": {
+    "kontekst": "Żywiec",
+    "notatka": "Źródło mówi o Beskidzie Zachodnim od Śląska Cieszyńskiego po Poprad i wymienia też Żywiec. Kropka stoi w Żywcu; to położenie przybliżone, a nie środek obszaru."
+  },
+  "1648-1772-C-001": {
+    "rzeka": "skawa",
+    "notatka": "Źródło wspomina o utonięciu podróżnego w Skawie, bez miejsca. Zaznaczono dzisiejszy bieg Skawy w zasięgu mapy, a nie miejsce zdarzenia."
+  },
+  "1648-1772-C-002": {
+    "rzeka": "skawa",
+    "notatka": "Źródło mówi o dolinie Skawy w okolicy Wadowic (młynówka wadowicka, granice wsi nadskawiańskich), bez zasięgu zalania. Zaznaczono dzisiejszy bieg Skawy w zasięgu mapy."
+  },
+  "1648-1772-C-003": {
+    "rzeka": "skawa",
+    "notatka": "Źródło podaje tylko rok wylewu, bez miejsca i strat. Zaznaczono dzisiejszy bieg Skawy w zasięgu mapy, a nie zasięg zalania."
+  },
+  "1648-1772-C-004": {
+    "rzeka": "skawa",
+    "notatka": "Źródło nie podaje miejsca utonięcia. Zaznaczono dzisiejszy bieg Skawy w zasięgu mapy, a nie miejsce zdarzenia."
+  },
+  "1648-1772-C-005": {
+    "miejscowosci": [
+      "Jaroszowice",
+      "Świnna Poręba",
+      "Mucharz"
+    ],
+    "przyblizony": true,
+    "notatka": "Źródło mówi o dolinie Skawy między Jaroszowicami, Świnną Porębą i Mucharzem. Zaznaczono dzisiejsze granice tych trzech wsi, a nie zasięg zalania."
+  },
+  "1648-1772-C-006": {
+    "miejscowosci": [
+      "Wadowice"
+    ],
+    "przyblizony": true,
+    "notatka": "Źródło mówi o „okolicach Wadowic” i nie podaje zasięgu. Zaznaczono tylko Wadowice."
+  },
+  "1648-1772-C-016": {
+    "data_tekst": "1733, 1736, 1740, 1744",
+    "lata": [
+      1733,
+      1736,
+      1740,
+      1744
+    ],
+    "notatka": "Źródło wymienia tylko pojedyncze lata głodowe w Małopolsce, nie ciągły okres."
   }
 }

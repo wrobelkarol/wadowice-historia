@@ -98,7 +98,7 @@
     // Pliki mogą chwilowo pochodzić z różnych publikacji (pamięć podręczna). Bez geometrii wydarzenie zostaje na liście.
     D.events.forEach(function (e) { if (e.obszar && !D.obszaryWgId[e.obszar]) e.na_mapie = false; });
     // Epidemia leży na spodzie; zaraza bydła i głód na tym samym obszarze rysują się na niej kreskowaniem.
-    var kolejnosc = { osadnictwo: -1, epidemia: 0, epizootia: 1, glod: 2 };
+    var kolejnosc = { inne: -2, osadnictwo: -1, epidemia: 0, epizootia: 1, glod: 2 };
     var obs = D.events.filter(function (e) { return e.rodzaj === 'obszar' && e.na_mapie; })
       .sort(function (a, b) { return kolejnosc[a.typ] - kolejnosc[b.typ]; });
     d3.select('#w-obszary').selectAll('path').data(obs, function (e) { return e.id; }).join('path')
@@ -229,6 +229,10 @@
       var t = Math.min(dx > 0 ? (x1 - cx) / dx : dx < 0 ? (x0 - cx) / dx : 9e9, dy > 0 ? (y1 - cy) / dy : dy < 0 ? (y0 - cy) / dy : 9e9);
       return { e: m.e, kat: Math.atan2(dy, dx) * 180 / Math.PI, x: cx + dx * t, y: cy + dy * t };
     }).sort(function (a, b) { return a.y - b.y || a.x - b.x; });
+    // Panel „Zjawiska obejmujące cały region” stoi w lewym dolnym rogu: znacznik pod nim byłby niewidoczny i nieklikalny.
+    var pan = document.querySelector('.panel-region'), pr = pan && !pan.hidden ? pan.getBoundingClientRect() : null;
+    if (pr) uloz.forEach(function (m) { if (m.x > pr.left - 14 && m.x < pr.right + 14 && m.y > pr.top - 14 && m.y < pr.bottom + 14) m.y = Math.max(y0, pr.top - 18); });
+    uloz.sort(function (a, b) { return a.y - b.y || a.x - b.x; });
     uloz.forEach(function (m, i) { // kilka zdarzeń w tym samym kierunku: rozsuwamy wzdłuż krawędzi
       for (var j = 0; j < i; j++) { if (Math.abs(uloz[j].x - m.x) < 24 && Math.abs(uloz[j].y - m.y) < 24) m.y = uloz[j].y + 24; }
       m.y = Math.min(m.y, y1);

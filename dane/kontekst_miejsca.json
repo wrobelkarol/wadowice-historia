@@ -52,5 +52,11 @@
   "lat": 50.0875,
   "osm": "relation/435514",
   "opis": "Praha, Česko"
+ },
+ "Żywiec": {
+  "lon": 19.2191,
+  "lat": 49.7065,
+  "osm": "relation/1751331",
+  "opis": "Żywiec, powiat żywiecki, województwo śląskie, 34-300, Polska"
  }
 }

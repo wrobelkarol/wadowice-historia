@@ -43,6 +43,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-vis
 .obszar-epidemia { fill: var(--epidemia); fill-opacity: 0.42; stroke: #a88900; }
 .obszar-epizootia { fill: var(--epizootia); fill-opacity: 0.38; stroke: #a8540f; }
 .obszar-glod { fill: var(--glod); fill-opacity: 0.38; stroke: #5f3c1b; }
+.obszar-inne { fill: #7a7a7a; fill-opacity: 0.34; stroke: #4f4f4f; }
 .obszar-osadnictwo { fill: var(--osadnictwo); fill-opacity: 0.4; stroke: #47703a; }
 .obszar-c { stroke-dasharray: 4 3; fill-opacity: 0.24; }
 
@@ -135,6 +136,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-vis
 .ob-epidemia { fill: var(--epidemia); fill-opacity: 0.45; stroke: #a88900; }
 .ob-epizootia { fill: var(--epizootia); fill-opacity: 0.42; stroke: #a8540f; }
 .ob-glod { fill: var(--glod); fill-opacity: 0.42; stroke: #5f3c1b; }
+.ob-inne { fill: #7a7a7a; fill-opacity: 0.4; stroke: #4f4f4f; }
 .ob-osadnictwo { fill: var(--osadnictwo); fill-opacity: 0.45; stroke: #47703a; }
 .li-powiat { stroke: var(--czern); stroke-width: 3; }
 .li-gmina { stroke: var(--ciemny); stroke-width: 1; }

@@ -37,6 +37,8 @@ Każdy rekord, który przeszedł filtr (status, pewność), jest na mapie. Wydar
 - `zasieg: szerszy`: nakładka w pasy na cały widok, z podpisami w panelu „Zjawiska obejmujące cały region”.
 - `zasieg: powiat` albo `zakres: region` bez ustalonych granic: nakładka na powiat. Bez pola `zasieg` ma podpis „zasięg nieokreślony”.
 - `zasieg: sasiedni` i miejsca poza zasięgiem: znacznik ze strzałką na krawędzi oraz kropka w widoku „Pokaż szerszy kontekst”. Skrypt ostrzega, jeśli rekord nie ma wpisu `kontekst`.
+- Typ `inne` na obszarze (np. powódź w kilku wsiach) jest szary; pozostałe kolory typów są w legendzie. Lata podane osobno (`lata` w `dane/lokalizacje_wydarzen.json`) zapalają zjawisko na suwaku tylko w tych latach, a data na mapie jest wypisana po przecinku, nie jako okres.
+- Znacznik krawędziowy, który wypadłby pod panelem „Zjawiska obejmujące cały region”, jest przesuwany nad panel.
 - `data_szacowana: true`: data z „ok.”, przerywany obrys i blok „Data szacowana” na podstronie.
 
 ## Pliki, które można poprawiać ręcznie
